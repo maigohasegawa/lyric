@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>LAYER SONG — 歌詞レイヤー分割ツール</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=Shippori+Mincho:wght@600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#121218;
+    --panel:#1a1b23;
+    --panel-2:#20212b;
+    --line:#2c2e3a;
+    --text:#eeeef2;
+    --muted:#8d8fa0;
+    --a:#12c2d6;      /* cyan   */
+    --a-dim:#12c2d61a;
+    --b:#ef3f96;      /* magenta*/
+    --b-dim:#ef3f961a;
+    --c:#f2b705;      /* yellow */
+    --c-dim:#f2b70522;
+    --paper:#f7f3e9;
+    --paper-ink:#20212b;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 15% 0%, #1c1e2c 0%, transparent 55%),
+      radial-gradient(circle at 85% 10%, #241a26 0%, transparent 45%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    padding:0 0 80px;
+  }
+  .mono{font-family:'JetBrains Mono', monospace;}
+
+  /* ---------- HERO ---------- */
+  header{
+    padding:56px 24px 40px;
+    max-width:1120px;
+    margin:0 auto;
+    display:flex;
+    align-items:center;
+    gap:32px;
+    flex-wrap:wrap;
+  }
+  .logo{flex:0 0 auto;}
+  .logo svg{display:block;}
+  h1{
+    font-family:'Shippori Mincho', serif;
+    font-weight:600;
+    font-size:clamp(28px,4vw,42px);
+    margin:0 0 10px;
+    letter-spacing:.02em;
+  }
+  header p{
+    color:var(--muted);
+    max-width:560px;
+    line-height:1.9;
+    margin:0;
+    font-size:14.5px;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.18em;
+    color:var(--muted);
+    text-transform:uppercase;
+    margin-bottom:14px;
+    display:flex;
+    gap:10px;
+    align-items:center;
+  }
+  .eyebrow .dot{width:6px;height:6px;border-radius:50%;}
+  .eyebrow .dot:nth-child(1){background:var(--a);}
+  .eyebrow .dot:nth-child(3){background:var(--b);}
+  .eyebrow .dot:nth-child(5){background:var(--c);}
+
+  main{max-width:1120px;margin:0 auto;padding:0 24px;}
+
+  section{margin-bottom:44px;}
+  .section-head{
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .step-no{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    color:var(--muted);
+    border:1px solid var(--line);
+    padding:2px 8px;
+    border-radius:20px;
+  }
+  .section-head h2{
+    font-size:17px;
+    margin:0;
+    font-weight:700;
+  }
+  .section-head .sub{
+    color:var(--muted);
+    font-size:12.5px;
+    margin-left:auto;
+  }
+
+  /* ---------- INPUT ---------- */
+  .input-panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px;
+  }
+  textarea#rawInput{
+    width:100%;
+    min-height:150px;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:10px;
+    color:var(--text);
+    padding:14px 16px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:13.5px;
+    line-height:1.9;
+    resize:vertical;
+  }
+  textarea#rawInput:focus{outline:2px solid var(--a);outline-offset:1px;}
+  .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:14px;}
+  button{
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    cursor:pointer;
+    border:none;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:700;
+    padding:10px 18px;
+    transition:transform .12s ease, opacity .12s ease;
+  }
+  button:active{transform:scale(.97);}
+  button:focus-visible{outline:2px solid #fff;outline-offset:2px;}
+  .btn-primary{background:var(--text);color:#111;}
+  .btn-primary:hover{opacity:.88;}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--line);}
+  .btn-ghost:hover{color:var(--text);border-color:var(--muted);}
+  .hint{color:var(--muted);font-size:12px;margin-left:4px;}
+
+  /* ---------- ASSIGN LIST ---------- */
+  .assign-list{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    overflow:hidden;
+  }
+  .assign-row{
+    display:grid;
+    grid-template-columns:34px 1fr auto 54px;
+    align-items:center;
+    gap:14px;
+    padding:10px 16px;
+    border-bottom:1px solid var(--line);
+  }
+  .assign-row:last-child{border-bottom:none;}
+  .assign-row .idx{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;}
+  .assign-row .txt{font-size:14px;}
+  .track-toggle{display:flex;gap:6px;}
+  .track-btn{
+    width:30px;height:30px;border-radius:8px;
+    border:1px solid var(--line);
+    background:transparent;
+    color:var(--muted);
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    font-weight:700;
+    padding:0;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .track-btn.on-A{background:var(--a);border-color:var(--a);color:#08181b;}
+  .track-btn.on-B{background:var(--b);border-color:var(--b);color:#2a0716;}
+  .track-btn.on-C{background:var(--c);border-color:var(--c);color:#2a2205;}
+  .char-count{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px;text-align:right;}
+
+  /* ---------- TRACK PANELS ---------- */
+  .tracks-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:16px;
+  }
+  @media(max-width:860px){.tracks-grid{grid-template-columns:1fr;}}
+  .track-card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .track-card.A{border-top:3px solid var(--a);}
+  .track-card.B{border-top:3px solid var(--b);}
+  .track-card.C{border-top:3px solid var(--c);}
+  .track-title{
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .track-title .name{
+    font-weight:900;font-size:15px;letter-spacing:.03em;
+    display:flex;align-items:center;gap:8px;
+  }
+  .track-title .swatch{width:10px;height:10px;border-radius:50%;}
+  .track-card.A .swatch{background:var(--a);}
+  .track-card.B .swatch{background:var(--b);}
+  .track-card.C .swatch{background:var(--c);}
+  .track-title .count{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);}
+  .track-body{max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:4px;}
+  .lead-line{
+    padding:8px 10px;
+    border-radius:8px;
+    font-size:13.5px;
+    line-height:1.6;
+  }
+  .track-card.A .lead-line{background:var(--a-dim);border-left:3px solid var(--a);}
+  .track-card.B .lead-line{background:var(--b-dim);border-left:3px solid var(--b);}
+  .track-card.C .lead-line{background:var(--c-dim);border-left:3px solid var(--c);}
+  .filler-wrap{position:relative;}
+  .filler-input{
+    width:100%;
+    background:var(--panel-2);
+    border:1px dashed var(--line);
+    border-radius:8px;
+    color:var(--text);
+    padding:8px 10px 16px;
+    font-size:13.5px;
+    font-family:'Zen Kaku Gothic New',sans-serif;
+    line-height:1.5;
+  }
+  .filler-input::placeholder{color:#5c5e6d;}
+  .filler-target{
+    position:absolute;right:8px;bottom:4px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;
+    color:#5c5e6d;
+  }
+  .track-copy{align-self:flex-start;}
+
+  /* ---------- OVERLAY / RECONSTRUCTION ---------- */
+  .overlay-wrap{
+    position:relative;
+    border-radius:16px;
+    padding:2px;
+    background:linear-gradient(120deg,var(--a),var(--b),var(--c));
+  }
+  .overlay-inner{
+    background:var(--paper);
+    color:var(--paper-ink);
+    border-radius:14px;
+    padding:26px 28px;
+  }
+  .overlay-status{
+    display:flex;align-items:center;gap:10px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;
+    margin-bottom:14px;
+    color:#5b5d3f;
+  }
+  .overlay-status .ok{color:#1f7a4d;font-weight:700;}
+  .overlay-status .ng{color:#b3402a;font-weight:700;}
+  .overlay-text{
+    font-family:'Shippori Mincho',serif;
+    font-size:16px;
+    line-height:2.1;
+    white-space:pre-wrap;
+  }
+  .overlay-text .seg-A{color:#0c7b88;}
+  .overlay-text .seg-B{color:#b3155f;}
+  .overlay-text .seg-C{color:#9a7500;}
+  .overlay-foot{
+    margin-top:18px;display:flex;gap:10px;
+  }
+
+  footer{
+    max-width:1120px;margin:40px auto 0;padding:0 24px;
+    color:var(--muted);font-size:12px;line-height:1.9;
+  }
+  .toast{
+    position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+    background:var(--text);color:#111;padding:9px 18px;border-radius:30px;
+    font-size:12.5px;font-weight:700;opacity:0;pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;
+    z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg width="86" height="86" viewBox="0 0 86 86">
+      <circle cx="34" cy="30" r="24" fill="var(--a)" opacity="0.75"/>
+      <circle cx="54" cy="30" r="24" fill="var(--b)" opacity="0.75" style="mix-blend-mode:screen"/>
+      <circle cx="44" cy="50" r="24" fill="var(--c)" opacity="0.75" style="mix-blend-mode:screen"/>
+    </svg>
+  </div>
+  <div>
+    <div class="eyebrow"><span class="dot"></span>TRACK A<span class="dot"></span>TRACK B<span class="dot"></span>TRACK C</div>
+    <h1>LAYER SONG — 歌詞レイヤー分割ツール</h1>
+    <p>1曲の歌詞を、3つの独立した曲に分解します。それぞれの曲は単独でも成立し、3曲を重ねて（同時に）歌うと元の1曲が浮かび上がる——そんなギミック曲づくりを補助します。担当以外の行は空欄なので、そこに各曲だけのフレーズを書き込んで、単独でも聴ける曲に育ててください。</p>
+  </div>
+</header>
+
+<main>
+
+  <section>
+    <div class="section-head">
+      <span class="step-no">STEP 1</span>
+      <h2>元の歌詞を貼り付ける</h2>
+      <span class="sub">1行 = 1フレーズとして扱います</span>
+    </div>
+    <div class="input-panel">
+      <textarea id="rawInput" spellcheck="false"></textarea>
+      <div class="row">
+        <button class="btn-primary" onclick="splitLyrics()">3トラックに分解する</button>
+        <button class="btn-ghost" onclick="rotateAssignment()">割り当てを1つずらす</button>
+        <button class="btn-ghost" onclick="resetAll()">リセット</button>
+        <span class="hint">空行は無視されます／分解後は各行のA・B・Cボタンで担当を変更できます</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="step-no">STEP 2</span>
+      <h2>各行の担当パートを決める</h2>
+      <span class="sub">クリックで A / B / C を切り替え</span>
+    </div>
+    <div class="assign-list" id="assignList"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="step-no">STEP 3</span>
+      <h2>3つの曲を書き上げる</h2>
+      <span class="sub">色つき＝元歌詞（担当パート）／枠線＝そのトラックだけの書き足し</span>
+    </div>
+    <div class="tracks-grid" id="tracksGrid"></div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <span class="step-no">STEP 4</span>
+      <h2>3曲を重ねたときの歌詞</h2>
+      <span class="sub">各行の担当パートだけを繋げた結果＝元の歌詞と一致するはずです</span>
+    </div>
+    <div class="overlay-wrap">
+      <div class="overlay-inner">
+        <div class="overlay-status" id="overlayStatus"></div>
+        <div class="overlay-text" id="overlayText"></div>
+        <div class="overlay-foot">
+          <button class="btn-primary" onclick="copyText(getOverlayPlain(),'重ねた歌詞')">重ねた歌詞をコピー</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  文字数はひらがな換算のモーラ数ではなく単純な文字数です。3曲を同時に歌う前提なら、担当外の行（枠線の入力欄）は目安の文字数に近づけると、テンポやフレーズの長さが揃って重ねやすくなります。
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const EXAMPLE = `窓の外 雨がやんで
+街の音が 少しずつ戻る
+昨日までの 迷いを畳んで
+傘をたたむ その音で決めた
+歩き出す 影が伸びる
+交差点で 手を振るきみへ
+言えなかった 言葉を今
+风に乗せて 届けにいくよ`.replace('风','風');
+
+let lines = [];     // {id, text, track}
+let fillers = {};   // id -> {A:'',B:'',C:''}
+let rotateOffset = 0;
+
+function charCount(s){ return [...s.replace(/\s/g,'')].length; }
+
+function splitLyrics(){
+  const raw = document.getElementById('rawInput').value;
+  const arr = raw.split('\n').map(s=>s.trim()).filter(s=>s.length>0);
+  const order = ['A','B','C'];
+  lines = arr.map((text,i)=>({id:'L'+i, text, track: order[i%3]}));
+  fillers = {};
+  lines.forEach(l=> fillers[l.id] = {A:'',B:'',C:''});
+  rotateOffset = 0;
+  render();
+}
+
+function rotateAssignment(){
+  if(lines.length===0) return;
+  rotateOffset++;
+  const order = ['A','B','C'];
+  lines.forEach((l,i)=>{ l.track = order[(i+rotateOffset)%3]; });
+  render();
+}
+
+function resetAll(){
+  document.getElementById('rawInput').value = EXAMPLE;
+  lines = []; fillers = {}; rotateOffset = 0;
+  splitLyrics();
+}
+
+function cycleTrack(id){
+  const order = ['A','B','C'];
+  const l = lines.find(x=>x.id===id);
+  l.track = order[(order.indexOf(l.track)+1)%3];
+  render();
+}
+
+function updateFiller(id, track, value){
+  fillers[id][track] = value;
+  renderTracks(); // overlay unaffected by fillers, but keep panels in sync
+}
+
+function render(){
+  renderAssignList();
+  renderTracks();
+  renderOverlay();
+}
+
+function renderAssignList(){
+  const el = document.getElementById('assignList');
+  if(lines.length===0){
+    el.innerHTML = `<div style="padding:24px;color:var(--muted);font-size:13px;">まだ歌詞が分解されていません。上のテキストエリアに歌詞を貼り付けて「3トラックに分解する」を押してください。</div>`;
+    return;
+  }
+  el.innerHTML = lines.map((l,i)=>`
+    <div class="assign-row">
+      <span class="idx mono">${String(i+1).padStart(2,'0')}</span>
+      <span class="txt">${escapeHtml(l.text)}</span>
+      <span class="track-toggle">
+        ${['A','B','C'].map(t=>`<button class="track-btn ${l.track===t?'on-'+t:''}" onclick="cycleTrackTo('${l.id}','${t}')">${t}</button>`).join('')}
+      </span>
+      <span class="char-count mono">${charCount(l.text)}字</span>
+    </div>
+  `).join('');
+}
+
+function cycleTrackTo(id, t){
+  const l = lines.find(x=>x.id===id);
+  l.track = t;
+  render();
+}
+
+function renderTracks(){
+  const el = document.getElementById('tracksGrid');
+  if(lines.length===0){ el.innerHTML=''; return; }
+  el.innerHTML = ['A','B','C'].map(t=>{
+    const body = lines.map(l=>{
+      if(l.track===t){
+        return `<div class="lead-line">${escapeHtml(l.text)}</div>`;
+      } else {
+        const val = fillers[l.id][t] || '';
+        return `
+          <div class="filler-wrap">
+            <textarea class="filler-input" rows="1"
+              placeholder="（${t}パート独自の一行）"
+              oninput="autoGrow(this); updateFiller('${l.id}','${t}', this.value)">${escapeHtml(val)}</textarea>
+            <span class="filler-target mono">目安${charCount(l.text)}字</span>
+          </div>`;
+      }
+    }).join('');
+    const total = lines.reduce((sum,l)=> sum + (l.track===t ? charCount(l.text) : charCount(fillers[l.id][t]||'')), 0);
+    return `
+      <div class="track-card ${t}">
+        <div class="track-title">
+          <span class="name"><span class="swatch"></span>TRACK ${t}</span>
+          <span class="count mono">計${total}字</span>
+        </div>
+        <div class="track-body">${body}</div>
+        <button class="btn-ghost track-copy" onclick="copyText(getTrackPlain('${t}'),'TRACK ${t}の歌詞')">TRACK ${t}をコピー</button>
+      </div>
+    `;
+  }).join('');
+  // auto-grow existing textareas
+  document.querySelectorAll('.filler-input').forEach(autoGrow);
+}
+
+function autoGrow(ta){
+  ta.style.height = 'auto';
+  ta.style.height = (ta.scrollHeight) + 'px';
+}
+
+function getTrackPlain(t){
+  return lines.map(l => l.track===t ? l.text : (fillers[l.id][t]||'')).filter(s=>s.length>0).join('\n');
+}
+
+function renderOverlay(){
+  const statusEl = document.getElementById('overlayStatus');
+  const textEl = document.getElementById('overlayText');
+  if(lines.length===0){
+    statusEl.innerHTML = '';
+    textEl.innerHTML = '<span style="color:#8a8c66;">分解するとここに、重ねた結果が表示されます。</span>';
+    return;
+  }
+  const original = lines.map(l=>l.text).join('\n');
+  textEl.innerHTML = lines.map(l => `<span class="seg-${l.track}">${escapeHtml(l.text)}</span>`).join('\n');
+  const matches = getOverlayPlain() === original;
+  statusEl.innerHTML = matches
+    ? `<span class="ok">MATCH ✓</span> 3トラックの担当行を順番に繋げると、元の歌詞と一致しています`
+    : `<span class="ng">— </span> 担当行の並び替え中はここが元歌詞と異なる場合があります`;
+}
+
+function getOverlayPlain(){
+  return lines.map(l=>l.text).join('\n');
+}
+
+function escapeHtml(s){
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let toastTimer;
+function copyText(text, label){
+  const showToast = () => {
+    const t = document.getElementById('toast');
+    t.textContent = `${label}をコピーしました`;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>t.classList.remove('show'), 1800);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(showToast).catch(()=>fallbackCopy(text, showToast));
+  } else {
+    fallbackCopy(text, showToast);
+  }
+}
+function fallbackCopy(text, cb){
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+// init
+document.getElementById('rawInput').value = EXAMPLE;
+splitLyrics();
+</script>
+</body>
+</html>
