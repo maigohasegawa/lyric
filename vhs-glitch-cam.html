@@ -382,6 +382,13 @@
     <div class="group-title">GLITCH</div>
     <div id="glitchFields"></div>
 
+    <div class="group-title">DREAM</div>
+    <div class="field">
+      <label>対称</label>
+      <select id="symSelect"></select>
+    </div>
+    <div id="dreamFields"></div>
+
     <div class="group-title">COLOR</div>
     <div class="field">
       <label>色味</label>
@@ -460,6 +467,17 @@ const PARAM_DEFS = {
     {key:'invert',   label:'色反転ノイズ',               min:0, max:1,   step:.01, def:0},
     {key:'autoRate', label:'自動グリッチの頻度',         min:0, max:1,   step:.01, def:.2},
   ],
+  dream: [
+    {key:'bloom',    label:'ブルーム（光のにじみ）',     min:0, max:1,   step:.01, def:0},
+    {key:'soft',     label:'ソフトフォーカス',           min:0, max:1,   step:.01, def:0},
+    {key:'fade',     label:'褪せ（黒が浮く・白っぽく）', min:0, max:1,   step:.01, def:0},
+    {key:'leak',     label:'光漏れ',                     min:0, max:1,   step:.01, def:0},
+    {key:'spark',    label:'きらめき（星）',             min:0, max:1,   step:.01, def:0},
+    {key:'aberr',    label:'レンズの色ズレ（周辺）',     min:0, max:1,   step:.01, def:0},
+    {key:'fish',     label:'レンズのふくらみ',           min:-.6,max:1,  step:.01, def:0},
+    {key:'breathe',  label:'うねり（ゆっくり歪む）',     min:0, max:1,   step:.01, def:0},
+    {key:'lofi',     label:'低画質デジカメ（粗いドット）',min:0, max:1,  step:.01, def:0},
+  ],
   color: [
     {key:'sat',      label:'彩度',                       min:0, max:2,   step:.01, def:.92},
     {key:'contrast', label:'コントラスト',               min:.5,max:2,   step:.01, def:1.1},
@@ -476,8 +494,13 @@ const TINTS = [
   {name:'青（夜・寒色）',   col:[0.60, 0.85, 1.40]},
   {name:'セピア（古い8mm）',col:[1.35, 1.02, 0.68]},
   {name:'赤（非常灯）',     col:[1.45, 0.55, 0.55]},
+  {name:'ピンク（ゆめ）',   col:[1.35, 0.86, 1.12]},
+  {name:'紫（ゆめ）',       col:[1.12, 0.78, 1.40]},
 ];
-const ALL_PARAMS = [...PARAM_DEFS.vhs, ...PARAM_DEFS.glitch, ...PARAM_DEFS.color];
+
+// 対称。ドリーム／ウィアードコア向け
+const SYMS = ['なし', '左右対称', '上下対称', '4分割'];
+const ALL_PARAMS = [...PARAM_DEFS.vhs, ...PARAM_DEFS.glitch, ...PARAM_DEFS.dream, ...PARAM_DEFS.color];
 
 const P = {};
 ALL_PARAMS.forEach(d => P[d.key] = d.def);
@@ -485,6 +508,7 @@ ALL_PARAMS.forEach(d => P[d.key] = d.def);
 /* ---------------- プリセット ---------------- */
 const BASE = {bleed:0,rgb:0,noise:0,scan:0,wobble:0,track:0,ghost:0,drop:0,interlace:0,stutter:0,
               roll:0,flicker:0,block:0,slice:0,wave:0,invert:0,autoRate:.2,
+              bloom:0,soft:0,fade:0,leak:0,spark:0,aberr:0,fish:0,breathe:0,lofi:0,
               sat:1,contrast:1,bright:0,vig:0,tint:0};
 
 // group: プリセット一覧の見出し／tintIdx: TINTS の番号
@@ -523,6 +547,27 @@ const PRESETS = [
       interlace:.5,stutter:.3,flicker:.5,roll:.35,block:.45,slice:.55,wave:.3,invert:.3,
       autoRate:.45,sat:.5,contrast:1.35,bright:-.05,vig:.6}},
 
+  {group:'ドリーム', name:'DREAMCORE', tintIdx:5,
+   p:{bloom:.7,soft:.45,fade:.5,leak:.3,spark:.25,aberr:.35,fish:.22,breathe:.3,lofi:.12,
+      noise:.06,sat:1.25,contrast:.95,bright:.06,vig:.25,tint:.25}},
+
+  {group:'ドリーム', name:'ゆめかわ', tintIdx:5,
+   p:{bloom:.85,soft:.55,fade:.68,leak:.45,spark:.6,aberr:.25,fish:.15,breathe:.35,
+      sat:1.35,contrast:.9,bright:.1,vig:.18,tint:.42}},
+
+  {group:'ドリーム', name:'WEIRDCORE', tintIdx:6, symIdx:1,
+   p:{bloom:.5,soft:.3,fade:.35,leak:.2,spark:.15,aberr:.55,fish:.45,breathe:.5,lofi:.35,
+      block:.12,slice:.1,invert:.12,autoRate:.18,noise:.1,
+      sat:1.4,contrast:1.1,bright:.03,vig:.3,tint:.3}},
+
+  {group:'ドリーム', name:'リミナル', tintIdx:2,
+   p:{bloom:.4,soft:.35,fade:.55,leak:.12,aberr:.2,fish:.18,breathe:.15,lofi:.2,
+      noise:.12,sat:.85,contrast:.95,bright:.05,vig:.35,tint:.3}},
+
+  {group:'ドリーム', name:'2000sデジカメ',
+   p:{bloom:.35,soft:.12,fade:.18,aberr:.3,fish:.1,lofi:.55,noise:.22,
+      sat:1.15,contrast:1.2,bright:.02,vig:.3}},
+
   {group:'グリッチ', name:'GLITCH',
    p:{bleed:.8,rgb:.45,noise:.2,scan:.2,wobble:.15,track:.25,ghost:.2,drop:.18,
       block:.6,slice:.5,wave:.2,invert:.25,autoRate:.35,sat:1.15,contrast:1.15,vig:.3}},
@@ -536,7 +581,7 @@ const PRESETS = [
 const S = {
   mirror:false, audio:true, osd:true, auto:false,
   mode:'video',
-  tintIdx:0,
+  tintIdx:0, symIdx:0,
   facing:'environment',
   deviceId:null,
   resolution:720,
@@ -566,6 +611,7 @@ uniform float uMirror;
 uniform float uBleed, uRgb, uNoise, uScan, uWobble, uTrack, uGhost, uDrop, uInterlace;
 uniform float uBlock, uSlice, uWave, uInvert;
 uniform float uFlicker, uRoll;
+uniform float uBloom, uSoft, uFade, uAberr, uFish, uBreathe, uLofi, uLeak, uSpark, uSym;
 uniform float uSat, uContrast, uBright, uVig, uTint;
 uniform vec3  uTintCol;
 
@@ -591,6 +637,16 @@ vec3 tex(vec2 p){
   return texture2D(uTex, clamp(p, vec2(0.0015), vec2(0.9985))).rgb;
 }
 
+/* 円形に散らしたぼかし。asp は縦横比の補正 */
+vec3 ringBlur(vec2 p, float rad, vec2 asp){
+  vec3 s = tex(p);
+  for(int i=0;i<6;i++){
+    float a = float(i) * 1.0472;
+    s += tex(p + vec2(cos(a), sin(a)) * rad * asp);
+  }
+  return s / 7.0;
+}
+
 #define TAPS 8
 
 void main(){
@@ -601,6 +657,23 @@ void main(){
   /* 走査線側の座標（画面に固定される現象はこちらを使う）と
      映像側の座標（テープの中身。ロールで動く）を分けて扱う */
   float srow = floor(vUv.y * uRes.y);
+  vec2 aspect = vec2(uRes.y / uRes.x, 1.0);
+
+  /* --- 対称（左半分／上半分を折り返す。ドリーム・ウィアードコア向け） --- */
+  if(uSym > 0.5){
+    if(uSym < 1.5)      uv.x = 0.5 - abs(uv.x - 0.5);
+    else if(uSym < 2.5) uv.y = 0.5 - abs(uv.y - 0.5);
+    else { uv.x = 0.5 - abs(uv.x - 0.5); uv.y = 0.5 - abs(uv.y - 0.5); }
+  }
+
+  /* --- レンズのふくらみ（魚眼／糸巻き） --- */
+  if(abs(uFish) > 0.001){
+    vec2 fc = uv - 0.5;
+    uv = 0.5 + fc * (1.0 - uFish * dot(fc, fc) * 1.6);
+  }
+
+  /* --- ゆっくりしたうねり（夢の中の揺らぎ） --- */
+  uv += vec2(sin(uv.y*4.2 + uTime*0.7), cos(uv.x*3.3 + uTime*0.55)) * uBreathe * 0.014;
 
   /* --- 垂直同期ズレ：画面が下から上へ流れる（ホラー向け） --- */
   float rollOff = 0.0;
@@ -644,6 +717,12 @@ void main(){
   vec2  boff = floor(braw * bs + 0.5) / bs;                        // ブロック単位にスナップ
   uv += boff;
 
+  /* --- 低画質デジカメ：座標を粗い格子に丸めてドットを大きくする --- */
+  if(uLofi > 0.001){
+    vec2 grid = mix(uRes, vec2(150.0, 84.0), uLofi*uLofi);
+    uv = (floor(uv * grid) + 0.5) / grid;
+  }
+
   /* --- クロマブリード（YIQのI/Qだけ横方向に引き伸ばす） --- */
   vec2 iq = vec2(0.0);
   float wsum = 0.0;
@@ -655,14 +734,41 @@ void main(){
     wsum += k;
   }
   iq /= max(wsum, 0.0001);
-  float luma = rgb2yiq(tex(uv)).x;
+  vec3  rawC = tex(uv);
+  float luma = rgb2yiq(rawC).x;
   vec3 col = yiq2rgb(vec3(luma, iq));
+
+  /* --- ソフトフォーカス（レンズに息を吹きかけたような甘さ） --- */
+  if(uSoft > 0.001){
+    vec3 sb = ringBlur(uv, 0.005 + uSoft*0.011, aspect);
+    col = mix(col, max(col, sb), uSoft*0.9);
+  }
 
   /* --- RGBシフト --- */
   float kr = clamp(uRgb*6.0, 0.0, 1.0);
   float amt = uRgb * 0.012 + bOn * uBlock * 0.01;
   col.r = mix(col.r, tex(uv + vec2(amt, 0.0)).r, kr);
   col.b = mix(col.b, tex(uv - vec2(amt, 0.0)).b, kr);
+
+  /* --- レンズの色ズレ：画面の端ほど赤と青が離れる --- */
+  if(uAberr > 0.001){
+    vec2  adir = vUv - 0.5;
+    float a2 = uAberr * 0.10 * dot(adir, adir);
+    col.r += tex(uv + adir*a2).r - rawC.r;
+    col.b += tex(uv - adir*a2).b - rawC.b;
+  }
+
+  /* --- ブルーム：明るいところがにじんで光る --- */
+  if(uBloom > 0.001){
+    vec3 bl = vec3(0.0);
+    for(int i=0;i<12;i++){
+      float a  = float(i) * 0.5236;
+      float rr = mix(0.013, 0.032, step(5.5, float(i)));
+      bl += tex(uv + vec2(cos(a), sin(a)) * rr * aspect);
+    }
+    bl /= 12.0;
+    col += max(bl - 0.58, vec3(0.0)) * 2.4 * uBloom;
+  }
 
   /* --- 残像・尾引き（前フレームのフィードバック） --- */
   vec3 prev = texture2D(uPrev, clamp(vUv - vec2(0.0016, 0.0), vec2(0.0), vec2(1.0))).rgb;
@@ -739,9 +845,45 @@ void main(){
   /* --- 色味（暗視の緑・夜の青・セピアなど） --- */
   col = mix(col, col * uTintCol, uTint);
 
+  /* --- 褪せ：黒が浮いて白っぽくなる。色味で選んだ色に寄せる --- */
+  if(uFade > 0.001){
+    vec3  haze = mix(vec3(1.0), uTintCol, 0.55);
+    float lum2 = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, haze, uFade * (0.75 - 0.5*lum2));
+  }
+
+  /* --- 光漏れ：画面の外から柔らかい光が差し込む --- */
+  if(uLeak > 0.001){
+    float la = t * 0.13;
+    vec2  lp = vec2(0.5 + cos(la)*0.78, 0.5 + sin(la*0.7)*0.72);
+    float lg = smoothstep(0.85, 0.05, distance(vUv, lp));
+    col += mix(vec3(1.0, 0.62, 0.42), uTintCol, 0.4) * lg * uLeak * 0.5;
+  }
+
   /* --- 周辺減光 --- */
   float d = distance(vUv, vec2(0.5));
   col *= 1.0 - uVig * smoothstep(0.34, 0.86, d) * 0.95;
+
+  /* --- 低画質デジカメ：色の段差（トーンジャンプ） --- */
+  if(uLofi > 0.001){
+    float qs = mix(255.0, 9.0, uLofi);
+    col = floor(clamp(col, 0.0, 1.0) * qs + 0.5) / qs;
+  }
+
+  /* --- きらめき：明るいところに小さな星が瞬く --- */
+  if(uSpark > 0.001){
+    vec2  sg  = vec2(16.0, 9.0);
+    vec2  sid = floor(vUv * sg);
+    vec2  sf  = fract(vUv * sg) - 0.5;
+    sf -= (vec2(hash21(sid+1.3), hash21(sid+5.9)) - 0.5) * 0.55;   // 格子の中でも位置をずらす
+    float on  = step(1.0 - uSpark*0.4, hash21(sid + 3.0));
+    float tw  = 0.5 + 0.5 * sin(t*2.4 + hash21(sid + 11.0) * 6.283);
+    vec2  q   = sf * vec2(sg.x/sg.y, 1.0);
+    float star = exp(-abs(q.x)*40.0) * exp(-abs(q.y)*7.0)
+               + exp(-abs(q.y)*40.0) * exp(-abs(q.x)*7.0);
+    float lum3 = dot(clamp(col,0.0,1.0), vec3(0.299, 0.587, 0.114));
+    col += star * on * tw * uSpark * smoothstep(0.3, 0.8, lum3) * 1.1;
+  }
 
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }`;
@@ -792,7 +934,9 @@ function initGL(){
 
   const names = ['uTex','uPrev','uRes','uTime','uMirror','uBleed','uRgb','uNoise','uScan','uWobble',
                  'uTrack','uGhost','uDrop','uInterlace','uBlock','uSlice','uWave','uInvert',
-                 'uFlicker','uRoll','uSat','uContrast','uBright','uVig','uTint','uTintCol'];
+                 'uFlicker','uRoll','uBloom','uSoft','uFade','uAberr','uFish','uBreathe',
+                 'uLofi','uLeak','uSpark','uSym',
+                 'uSat','uContrast','uBright','uVig','uTint','uTintCol'];
   names.forEach(n => uni[n] = gl.getUniformLocation(progFx, n));
   uniBlit.uTex = gl.getUniformLocation(progBlit, 'uTex');
 }
@@ -915,6 +1059,16 @@ function render(now){
   gl.uniform1f(uni.uInvert, e.invert);
   gl.uniform1f(uni.uFlicker, e.flicker);
   gl.uniform1f(uni.uRoll, e.roll);
+  gl.uniform1f(uni.uBloom, e.bloom);
+  gl.uniform1f(uni.uSoft, e.soft);
+  gl.uniform1f(uni.uFade, e.fade);
+  gl.uniform1f(uni.uAberr, e.aberr);
+  gl.uniform1f(uni.uFish, e.fish);
+  gl.uniform1f(uni.uBreathe, e.breathe);
+  gl.uniform1f(uni.uLofi, e.lofi);
+  gl.uniform1f(uni.uLeak, e.leak);
+  gl.uniform1f(uni.uSpark, e.spark);
+  gl.uniform1f(uni.uSym, S.symIdx);
   gl.uniform1f(uni.uSat, e.sat);
   gl.uniform1f(uni.uContrast, e.contrast);
   gl.uniform1f(uni.uBright, e.bright);
@@ -1209,11 +1363,14 @@ function applyPreset(i){
   S.preset = i;
   Object.assign(P, BASE, PRESETS[i].p);
   S.tintIdx = PRESETS[i].tintIdx || 0;
+  S.symIdx  = PRESETS[i].symIdx  || 0;
   document.querySelectorAll('.preset').forEach(b => {
     b.classList.toggle('active', +b.dataset.i === i);
   });
   const sel = document.getElementById('tintSelect');
   if(sel) sel.value = String(S.tintIdx);
+  const sym = document.getElementById('symSelect');
+  if(sym) sym.value = String(S.symIdx);
   document.getElementById('presetBadge').textContent = PRESETS[i].name;
   syncSliders();
   saveSettingsSoon();
@@ -1242,7 +1399,13 @@ function buildSliders(){
   };
   make(PARAM_DEFS.vhs, 'vhsFields');
   make(PARAM_DEFS.glitch, 'glitchFields');
+  make(PARAM_DEFS.dream, 'dreamFields');
   make(PARAM_DEFS.color, 'colorFields');
+
+  const sym = document.getElementById('symSelect');
+  sym.innerHTML = SYMS.map((s,i) => `<option value="${i}">${s}</option>`).join('');
+  sym.value = String(S.symIdx);
+  sym.addEventListener('change', () => { S.symIdx = +sym.value; saveSettingsSoon(); });
 
   const sel = document.getElementById('tintSelect');
   sel.innerHTML = TINTS.map((t,i) => `<option value="${i}">${t.name}</option>`).join('');
@@ -1292,7 +1455,7 @@ function saveSettingsSoon(){
 function saveSettings(){
   try{
     localStorage.setItem(LS_KEY, JSON.stringify({
-      p: P, preset: S.preset, tintIdx: S.tintIdx, mirror: S.mirror, audio: S.audio,
+      p: P, preset: S.preset, tintIdx: S.tintIdx, symIdx: S.symIdx, mirror: S.mirror, audio: S.audio,
       osd: S.osd, auto: S.auto, resolution: S.resolution
     }));
   }catch(e){ /* プライベートブラウズなどでは保存しない */ }
@@ -1510,6 +1673,7 @@ function registerSW(){
       if(typeof saved[k] === 'boolean') S[k] = saved[k];
     });
     if(typeof saved.tintIdx === 'number' && TINTS[saved.tintIdx]) S.tintIdx = saved.tintIdx;
+    if(typeof saved.symIdx  === 'number' && SYMS[saved.symIdx])   S.symIdx  = saved.symIdx;
     if([480,720,1080].includes(saved.resolution)){
       S.resolution = saved.resolution;
       document.getElementById('resSelect').value = String(saved.resolution);
