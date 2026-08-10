@@ -108,6 +108,14 @@
     white-space:nowrap;
   }
   .preset.active{background:var(--text);color:#111;border-color:var(--text);}
+  .preset-group{
+    flex:0 0 auto;align-self:center;
+    font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.16em;
+    color:#5c5e6d;padding:0 4px 0 8px;
+    border-left:1px solid var(--line);
+    margin-left:2px;
+  }
+  .preset-group:first-child{border-left:none;margin-left:0;padding-left:0;}
 
   #buttons{
     display:flex;align-items:center;justify-content:space-between;
@@ -375,6 +383,10 @@
     <div id="glitchFields"></div>
 
     <div class="group-title">COLOR</div>
+    <div class="field">
+      <label>色味</label>
+      <select id="tintSelect"></select>
+    </div>
     <div id="colorFields"></div>
 
     <p class="sub-note">
@@ -435,23 +447,36 @@ const PARAM_DEFS = {
     {key:'wobble',   label:'テープ揺れ（ワウ）',         min:0, max:1,   step:.01, def:.25},
     {key:'track',    label:'トラッキング乱れ（下部）',   min:0, max:1,   step:.01, def:.4},
     {key:'ghost',    label:'残像・尾引き',               min:0, max:1,   step:.01, def:.3},
-    {key:'drop',     label:'ドロップアウト（白い線）',   min:0, max:1,   step:.01, def:.3},
+    {key:'drop',     label:'テープの傷（細い白線）',     min:0, max:1,   step:.01, def:.3},
     {key:'interlace',label:'インターレース',             min:0, max:1,   step:.01, def:.3},
     {key:'stutter',  label:'コマ落ち',                   min:0, max:1,   step:.01, def:0},
+    {key:'roll',     label:'縦の同期ズレ（画面が流れる）',min:0,max:1,   step:.01, def:0},
+    {key:'flicker',  label:'明滅（照明のちらつき）',     min:0, max:1,   step:.01, def:0},
   ],
   glitch: [
-    {key:'block',    label:'ブロックグリッチ',           min:0, max:1,   step:.01, def:0},
+    {key:'block',    label:'ブロックグリッチ（モザイク状のズレ）', min:0, max:1, step:.01, def:0},
     {key:'slice',    label:'スライスずれ',               min:0, max:1,   step:.01, def:0},
     {key:'wave',     label:'波打ち歪み',                 min:0, max:1,   step:.01, def:0},
     {key:'invert',   label:'色反転ノイズ',               min:0, max:1,   step:.01, def:0},
+    {key:'autoRate', label:'自動グリッチの頻度',         min:0, max:1,   step:.01, def:.2},
   ],
   color: [
     {key:'sat',      label:'彩度',                       min:0, max:2,   step:.01, def:.92},
     {key:'contrast', label:'コントラスト',               min:.5,max:2,   step:.01, def:1.1},
     {key:'bright',   label:'明るさ',                     min:-.5,max:.5, step:.01, def:0},
     {key:'vig',      label:'周辺減光',                   min:0, max:1,   step:.01, def:.35},
+    {key:'tint',     label:'色味の強さ',                 min:0, max:1,   step:.01, def:0},
   ]
 };
+
+// 色味（下の「色味」セレクトで選ぶ。強さは上の tint スライダー）
+const TINTS = [
+  {name:'なし',            col:[1.00, 1.00, 1.00]},
+  {name:'緑（暗視カメラ）', col:[0.40, 1.30, 0.50]},
+  {name:'青（夜・寒色）',   col:[0.60, 0.85, 1.40]},
+  {name:'セピア（古い8mm）',col:[1.35, 1.02, 0.68]},
+  {name:'赤（非常灯）',     col:[1.45, 0.55, 0.55]},
+];
 const ALL_PARAMS = [...PARAM_DEFS.vhs, ...PARAM_DEFS.glitch, ...PARAM_DEFS.color];
 
 const P = {};
@@ -459,30 +484,59 @@ ALL_PARAMS.forEach(d => P[d.key] = d.def);
 
 /* ---------------- プリセット ---------------- */
 const BASE = {bleed:0,rgb:0,noise:0,scan:0,wobble:0,track:0,ghost:0,drop:0,interlace:0,stutter:0,
-              block:0,slice:0,wave:0,invert:0,sat:1,contrast:1,bright:0,vig:0};
+              roll:0,flicker:0,block:0,slice:0,wave:0,invert:0,autoRate:.2,
+              sat:1,contrast:1,bright:0,vig:0,tint:0};
 
+// group: プリセット一覧の見出し／tintIdx: TINTS の番号
 const PRESETS = [
-  {name:'CLEAN', p:{}},
-  {name:'VHS 1984', p:{bleed:1.4,rgb:.18,noise:.22,scan:.38,wobble:.28,track:.4,ghost:.3,drop:.3,
-                       interlace:.3,sat:.92,contrast:1.12,bright:.02,vig:.35}},
-  {name:'WORN TAPE', p:{bleed:2.2,rgb:.3,noise:.5,scan:.5,wobble:.55,track:.8,ghost:.45,drop:.7,
-                        interlace:.45,stutter:.25,sat:.7,contrast:1.2,bright:-.03,vig:.55}},
-  {name:'CAMCORDER 8mm', p:{bleed:.8,rgb:.1,noise:.3,scan:.15,wobble:.12,track:.12,ghost:.15,drop:.15,
-                            interlace:.15,sat:1.05,contrast:1.05,bright:.04,vig:.45}},
-  {name:'GLITCH', p:{bleed:.8,rgb:.45,noise:.2,scan:.2,wobble:.15,track:.25,ghost:.2,drop:.2,
-                     block:.55,slice:.5,wave:.2,invert:.25,sat:1.15,contrast:1.15,vig:.3}},
-  {name:'DATAMOSH', p:{bleed:1.8,rgb:.35,noise:.12,scan:.1,ghost:.88,block:.4,slice:.25,wave:.35,
-                       stutter:.4,sat:1.2,contrast:1.05,vig:.25}},
-  {name:'BROKEN TV', p:{bleed:2.6,rgb:.7,noise:.75,scan:.6,wobble:.8,track:1,ghost:.55,drop:.9,
-                        interlace:.6,block:.8,slice:.75,wave:.5,invert:.5,sat:.6,contrast:1.35,vig:.6}},
-  {name:'MONO SECURITY', p:{bleed:.2,rgb:.05,noise:.45,scan:.55,wobble:.1,track:.3,ghost:.25,drop:.4,
-                            interlace:.5,stutter:.5,sat:0,contrast:1.3,bright:-.02,vig:.6}},
+  {group:'VHS', name:'CLEAN', p:{}},
+
+  {group:'VHS', name:'VHS 1984',
+   p:{bleed:1.4,rgb:.18,noise:.2,scan:.38,wobble:.28,track:.4,ghost:.3,drop:.28,
+      interlace:.3,sat:.92,contrast:1.12,bright:.02,vig:.35}},
+
+  {group:'VHS', name:'すり切れテープ',
+   p:{bleed:2.2,rgb:.3,noise:.45,scan:.5,wobble:.55,track:.8,ghost:.45,drop:.6,
+      interlace:.45,stutter:.25,roll:.05,flicker:.12,sat:.7,contrast:1.2,bright:-.03,vig:.55}},
+
+  {group:'VHS', name:'8mm ホームビデオ', tintIdx:3,
+   p:{bleed:.8,rgb:.1,noise:.26,scan:.15,wobble:.12,track:.12,ghost:.15,drop:.14,
+      interlace:.15,sat:1.02,contrast:1.05,bright:.04,vig:.45,tint:.3}},
+
+  {group:'ホラー', name:'心霊ビデオ',
+   p:{bleed:1.5,rgb:.2,noise:.36,scan:.35,wobble:.3,track:.45,ghost:.42,drop:.3,
+      interlace:.35,stutter:.1,flicker:.28,roll:.03,block:.12,slice:.12,autoRate:.12,
+      sat:.55,contrast:1.28,bright:-.09,vig:.68}},
+
+  {group:'ホラー', name:'監視カメラ',
+   p:{bleed:.15,rgb:.04,noise:.4,scan:.55,wobble:.08,track:.25,ghost:.2,drop:.22,
+      interlace:.5,stutter:.45,flicker:.15,autoRate:.08,
+      sat:0,contrast:1.35,bright:-.04,vig:.62}},
+
+  {group:'ホラー', name:'暗視カメラ', tintIdx:1,
+   p:{bleed:.3,rgb:.06,noise:.6,scan:.3,wobble:.1,track:.2,ghost:.3,drop:.2,
+      interlace:.25,flicker:.2,autoRate:.1,
+      sat:0,contrast:1.3,bright:.07,vig:.72,tint:.95}},
+
+  {group:'ホラー', name:'呪いのテープ',
+   p:{bleed:2.4,rgb:.5,noise:.6,scan:.5,wobble:.75,track:1,ghost:.5,drop:.75,
+      interlace:.5,stutter:.3,flicker:.5,roll:.35,block:.45,slice:.55,wave:.3,invert:.3,
+      autoRate:.45,sat:.5,contrast:1.35,bright:-.05,vig:.6}},
+
+  {group:'グリッチ', name:'GLITCH',
+   p:{bleed:.8,rgb:.45,noise:.2,scan:.2,wobble:.15,track:.25,ghost:.2,drop:.18,
+      block:.6,slice:.5,wave:.2,invert:.25,autoRate:.35,sat:1.15,contrast:1.15,vig:.3}},
+
+  {group:'グリッチ', name:'DATAMOSH',
+   p:{bleed:1.8,rgb:.35,noise:.12,scan:.1,ghost:.9,block:.45,slice:.25,wave:.35,
+      stutter:.4,autoRate:.3,sat:1.2,contrast:1.05,vig:.25}},
 ];
 
 /* ---------------- 状態 ---------------- */
 const S = {
   mirror:false, audio:true, osd:true, auto:false,
   mode:'video',
+  tintIdx:0,
   facing:'environment',
   deviceId:null,
   resolution:720,
@@ -511,7 +565,9 @@ uniform float uTime;
 uniform float uMirror;
 uniform float uBleed, uRgb, uNoise, uScan, uWobble, uTrack, uGhost, uDrop, uInterlace;
 uniform float uBlock, uSlice, uWave, uInvert;
-uniform float uSat, uContrast, uBright, uVig;
+uniform float uFlicker, uRoll;
+uniform float uSat, uContrast, uBright, uVig, uTint;
+uniform vec3  uTintCol;
 
 float hash11(float p){ return fract(sin(p*127.1)*43758.5453123); }
 float hash21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453123); }
@@ -542,38 +598,50 @@ void main(){
   vec2 uv = vUv;
   uv.x = mix(uv.x, 1.0 - uv.x, uMirror);
 
-  float row = floor(uv.y * uRes.y);
+  /* 走査線側の座標（画面に固定される現象はこちらを使う）と
+     映像側の座標（テープの中身。ロールで動く）を分けて扱う */
+  float srow = floor(vUv.y * uRes.y);
+
+  /* --- 垂直同期ズレ：画面が下から上へ流れる（ホラー向け） --- */
+  float rollOff = 0.0;
+  if(uRoll > 0.001){
+    rollOff = fract(t * uRoll * 0.20 + vnoise(vec2(t*0.4, 7.0)) * uRoll * 0.5);
+    uv.y = fract(uv.y + rollOff);
+  }
 
   /* --- テープ揺れ（横方向のライン単位ジッタ + ゆっくりしたうねり） --- */
-  float w  = (vnoise(vec2(row*0.05, t*2.2)) - 0.5) * 2.0;
-  w += (hash21(vec2(row, floor(t*24.0))) - 0.5) * 0.45;
+  float w  = (vnoise(vec2(srow*0.05, t*2.2)) - 0.5) * 2.0;
+  w += (hash21(vec2(srow, floor(t*24.0))) - 0.5) * 0.45;
   uv.x += w * uWobble * 0.016;
-  uv.x += sin(uv.y*3.4 + t*1.1) * uWobble * 0.004;
+  uv.x += sin(vUv.y*3.4 + t*1.1) * uWobble * 0.004;
 
   /* --- 波打ち歪み（グリッチ） --- */
-  uv.x += sin(uv.y*38.0 + t*9.0) * uWave * 0.012;
-  uv.y += sin(uv.x*17.0 + t*5.0) * uWave * 0.004;
+  uv.x += sin(vUv.y*38.0 + t*9.0) * uWave * 0.012;
+  uv.y += sin(vUv.x*17.0 + t*5.0) * uWave * 0.004;
 
   /* --- ヘッドスイッチングノイズ（画面下部の帯） --- */
-  float band = smoothstep(0.055, 0.0, uv.y);
-  float bshift = (hash21(vec2(row, floor(t*14.0))) - 0.5);
+  float band = smoothstep(0.055, 0.0, vUv.y);
+  float bshift = (hash21(vec2(srow, floor(t*14.0))) - 0.5);
   uv.x += band * bshift * uTrack * 0.35;
 
   /* --- スライスずれ --- */
   float st = floor(t*9.0);
-  float sIdx = floor(uv.y * 26.0);
+  float sIdx = floor(vUv.y * 26.0);
   float sr = hash21(vec2(sIdx, st));
   float sOn = step(1.0 - uSlice*0.55, sr);
   uv.x += sOn * (hash21(vec2(sIdx+7.3, st)) - 0.5) * 0.34 * uSlice;
 
-  /* --- ブロックグリッチ --- */
-  vec2 bs  = vec2(14.0, 9.0);
+  /* --- ブロックグリッチ ---
+     細かいモザイク単位でずらす。ずらす量もブロック格子にスナップさせて、
+     切り出した四角がそのまま隣にはまったように見せる。 */
   float bt = floor(t*11.0);
-  vec2 bid = floor(uv * bs);
-  float br = hash21(bid + bt*13.7);
-  float bOn = step(1.0 - uBlock*0.4, br);
-  vec2 boff = (vec2(hash21(bid+bt+3.1), hash21(bid+bt+9.7)) - 0.5)
-              * vec2(0.28, 0.05) * uBlock * bOn;
+  vec2  bs = vec2(48.0, 30.0) * (1.0 + step(0.55, hash11(bt)));   // 時々さらに細かく
+  vec2  bid = floor(vUv * bs);
+  float br  = hash21(bid + bt*13.7);
+  float bOn = step(1.0 - uBlock*0.22, br);
+  vec2  braw = (vec2(hash21(bid+bt+3.1), hash21(bid+bt+9.7)) - 0.5)
+               * vec2(0.09, 0.03) * uBlock * bOn;
+  vec2  boff = floor(braw * bs + 0.5) / bs;                        // ブロック単位にスナップ
   uv += boff;
 
   /* --- クロマブリード（YIQのI/Qだけ横方向に引き伸ばす） --- */
@@ -600,35 +668,76 @@ void main(){
   vec3 prev = texture2D(uPrev, clamp(vUv - vec2(0.0016, 0.0), vec2(0.0), vec2(1.0))).rgb;
   col = mix(col, max(col, prev * 0.985), uGhost);
 
-  /* --- ブロック内の色反転ノイズ --- */
-  float invOn = step(1.0 - uInvert*0.12, hash21(bid + bt*5.5 + 41.0));
-  col = mix(col, vec3(1.0) - col.bgr, invOn * uInvert);
+  /* --- 色反転ノイズ ---
+     ずらしブロックより粗い格子で、数を絞って出す。
+     細かい格子のまま出すと色の粒が散らばって安っぽく見えるため。 */
+  vec2  ibid  = floor(vUv * vec2(9.0, 6.0));
+  float invOn = step(1.0 - uInvert*0.07, hash21(ibid + bt*5.5 + 41.0));
+  col = mix(col, vec3(1.0) - col.bgr, invOn * uInvert * 0.85);
 
-  /* --- ドロップアウト（短い白い横スジ） --- */
-  float drow = floor(uv.y * uRes.y / 2.0);
-  float dt   = floor(t*15.0);
-  float dOn  = step(1.0 - uDrop*0.05, hash21(vec2(drow, dt)));
-  float dx0  = hash21(vec2(drow+3.7, dt));
-  float dlen = 0.04 + hash21(vec2(drow+9.1, dt)) * 0.32;
-  float inSeg = step(dx0, uv.x) * step(uv.x, dx0 + dlen);
-  col = mix(col, vec3(0.93, 0.93, 0.96), dOn * inSeg * 0.85);
+  /* --- ドロップアウト（テープの傷）---
+     1ピクセル幅の細い線を数本だけ、位置・長さ・明るさをすべてランダムに出す。
+     線の手前に軽い黒を置くと、テープが一瞬信号を失った感じになる。 */
+  float px = 1.0 / uRes.y;
+  for(int i=0;i<3;i++){
+    float fi = float(i);
+    float slot = floor(t*11.0 + fi*37.0);            // 本ごとに違うタイミングで入れ替わる
+    float r0 = hash21(vec2(slot, fi*5.3));
+    float on = step(1.0 - uDrop*0.55, r0);           // ほとんどのコマでは出ない
 
-  /* --- ざらつきノイズ --- */
+    float ey   = hash21(vec2(slot+1.7, fi*2.9));     // 縦位置：格子に乗らない完全ランダム
+    float ex0  = hash21(vec2(slot+4.3, fi*7.1)) * 0.9;
+    float rl   = hash21(vec2(slot+8.9, fi*3.7));
+    float elen = 0.012 + rl*rl * 0.16;               // 短いものが出やすい
+    float thin = 0.5 + hash21(vec2(slot+2.2, fi)) * 0.7;  // 0.5〜1.2px
+    float bri  = 0.55 + hash21(vec2(slot+6.6, fi)) * 0.45;
+
+    float line = 1.0 - smoothstep(px*thin*0.5, px*thin*1.6, abs(vUv.y - ey));
+    float xr   = (vUv.x - ex0) / elen;
+    float seg  = step(0.0, xr) * step(xr, 1.0)
+               * smoothstep(0.0, 0.18, xr) * smoothstep(1.0, 0.82, xr);  // 端をぼかす
+    float lead = step(-0.035, vUv.x - ex0) * step(vUv.x - ex0, 0.0);     // 直前の黒
+
+    col *= 1.0 - line * lead * 0.55 * on;
+    col  = mix(col, vec3(bri, bri, bri*1.03), line * seg * on);
+  }
+
+  /* --- ざらつきノイズ（暗部ほど強く＝夜の映像らしくなる） --- */
   float n = hash21(gl_FragCoord.xy + vec2(t*91.7, t*57.3));
-  col += (n - 0.5) * uNoise * 0.55;
-  /* 高輝度側に乗るスノーノイズ */
-  col += step(0.995 - uNoise*0.004, n) * uNoise * 0.5;
+  float lum0 = dot(col, vec3(0.299, 0.587, 0.114));
+  float grainW = mix(1.5, 0.85, smoothstep(0.0, 0.65, lum0));
+  col += (n - 0.5) * uNoise * 0.5 * grainW;
+  /* たまに走る小さな白点（スノーノイズ） */
+  col += step(0.997 - uNoise*0.0025, n) * uNoise * 0.45;
 
   /* --- 走査線 / インターレース --- */
-  float scanline = 0.5 + 0.5 * sin(uv.y * uRes.y * 3.14159);
+  float scanline = 0.5 + 0.5 * sin(vUv.y * uRes.y * 3.14159);
   col *= 1.0 - uScan * 0.45 * scanline;
-  float field = mod(row + floor(t*60.0), 2.0);
+  float field = mod(srow + floor(t*60.0), 2.0);
   col *= 1.0 - uInterlace * 0.22 * field;
+
+  /* --- 明滅（不安定な電源・照明。ホラー向け） --- */
+  float fl = 1.0
+           + (vnoise(vec2(t*6.5, 3.0)) - 0.5) * uFlicker * 0.85
+           + (hash11(floor(t*26.0)) - 0.5) * uFlicker * 0.3;
+  col *= fl;
+
+  /* --- ロール時の継ぎ目：黒帯＋ノイズで隠す --- */
+  if(uRoll > 0.001){
+    float ds = abs(vUv.y - (1.0 - rollOff));
+    ds = min(ds, 1.0 - ds);
+    float bar = smoothstep(0.028, 0.0, ds);
+    float bn  = hash21(gl_FragCoord.xy + vec2(t*133.0, t*71.0));
+    col = mix(col, vec3(bn * 0.35 + 0.02), bar * 0.9);
+  }
 
   /* --- カラー調整 --- */
   float l = dot(col, vec3(0.299, 0.587, 0.114));
   col = mix(vec3(l), col, uSat);
   col = (col - 0.5) * uContrast + 0.5 + uBright;
+
+  /* --- 色味（暗視の緑・夜の青・セピアなど） --- */
+  col = mix(col, col * uTintCol, uTint);
 
   /* --- 周辺減光 --- */
   float d = distance(vUv, vec2(0.5));
@@ -683,7 +792,7 @@ function initGL(){
 
   const names = ['uTex','uPrev','uRes','uTime','uMirror','uBleed','uRgb','uNoise','uScan','uWobble',
                  'uTrack','uGhost','uDrop','uInterlace','uBlock','uSlice','uWave','uInvert',
-                 'uSat','uContrast','uBright','uVig'];
+                 'uFlicker','uRoll','uSat','uContrast','uBright','uVig','uTint','uTintCol'];
   names.forEach(n => uni[n] = gl.getUniformLocation(progFx, n));
   uniBlit.uTex = gl.getUniformLocation(progBlit, 'uTex');
 }
@@ -740,13 +849,15 @@ function effective(){
   const b = S.hold ? 1 : (now < S.burstUntil ? 1 : 0);
   if(!b) return P;
   const e = Object.assign({}, P);
-  e.block  = Math.min(1, P.block + 0.65);
-  e.slice  = Math.min(1, P.slice + 0.6);
-  e.rgb    = Math.min(1, P.rgb   + 0.5);
-  e.wave   = Math.min(1, P.wave  + 0.35);
-  e.invert = Math.min(1, P.invert+ 0.4);
-  e.noise  = Math.min(1, P.noise + 0.25);
-  e.track  = Math.min(1, P.track + 0.4);
+  e.block  = Math.min(1, P.block  + 0.8);
+  e.slice  = Math.min(1, P.slice  + 0.6);
+  e.rgb    = Math.min(1, P.rgb    + 0.5);
+  e.wave   = Math.min(1, P.wave   + 0.35);
+  e.invert = Math.min(1, P.invert + 0.4);
+  e.noise  = Math.min(1, P.noise  + 0.25);
+  e.track  = Math.min(1, P.track  + 0.4);
+  e.drop   = Math.min(1, P.drop   + 0.35);
+  e.roll   = Math.min(1, P.roll   + 0.15);
   return e;
 }
 
@@ -802,10 +913,15 @@ function render(now){
   gl.uniform1f(uni.uSlice, e.slice);
   gl.uniform1f(uni.uWave, e.wave);
   gl.uniform1f(uni.uInvert, e.invert);
+  gl.uniform1f(uni.uFlicker, e.flicker);
+  gl.uniform1f(uni.uRoll, e.roll);
   gl.uniform1f(uni.uSat, e.sat);
   gl.uniform1f(uni.uContrast, e.contrast);
   gl.uniform1f(uni.uBright, e.bright);
   gl.uniform1f(uni.uVig, e.vig);
+  gl.uniform1f(uni.uTint, e.tint);
+  const tc = (TINTS[S.tintIdx] || TINTS[0]).col;
+  gl.uniform3f(uni.uTintCol, tc[0], tc[1], tc[2]);
   gl.drawArrays(gl.TRIANGLES, 0, 3);
 
   // --- 画面（glCanvas）へ転送 ---
@@ -822,9 +938,14 @@ function render(now){
   octx.drawImage(glCanvas, 0, 0);
   if(S.osd) drawOSD(t);
 
-  // 自動グリッチ
-  if(S.auto && now > S.burstUntil && Math.random() < 0.015){
-    S.burstUntil = now + 60 + Math.random() * 320;
+  // 自動グリッチ：頻度は控えめなほど「たまに一瞬だけ壊れる」ホラー向きになる
+  if(S.auto && now > S.burstUntil){
+    const rate = 0.0015 + P.autoRate * P.autoRate * 0.05;
+    if(Math.random() < rate){
+      // ほとんどは一瞬。まれに長く尾を引く
+      const long = Math.random() < 0.15;
+      S.burstUntil = now + (long ? 260 + Math.random()*420 : 40 + Math.random()*140);
+    }
   }
 }
 
@@ -1070,8 +1191,15 @@ function downloadResult(){
 /* ---------------- UI 構築 ---------------- */
 function buildPresets(){
   const el = document.getElementById('presets');
-  el.innerHTML = PRESETS.map((p,i) =>
-    `<button class="preset${i===S.preset?' active':''}" data-i="${i}">${p.name}</button>`).join('');
+  let group = null, html = '';
+  PRESETS.forEach((p,i) => {
+    if(p.group !== group){
+      group = p.group;
+      html += `<span class="preset-group">${group}</span>`;
+    }
+    html += `<button class="preset" data-i="${i}">${p.name}</button>`;
+  });
+  el.innerHTML = html;
   el.querySelectorAll('.preset').forEach(b => {
     b.addEventListener('click', () => applyPreset(+b.dataset.i));
   });
@@ -1080,10 +1208,19 @@ function buildPresets(){
 function applyPreset(i){
   S.preset = i;
   Object.assign(P, BASE, PRESETS[i].p);
-  document.querySelectorAll('.preset').forEach((b,j) => b.classList.toggle('active', j===i));
+  S.tintIdx = PRESETS[i].tintIdx || 0;
+  document.querySelectorAll('.preset').forEach(b => {
+    b.classList.toggle('active', +b.dataset.i === i);
+  });
+  const sel = document.getElementById('tintSelect');
+  if(sel) sel.value = String(S.tintIdx);
   document.getElementById('presetBadge').textContent = PRESETS[i].name;
   syncSliders();
   saveSettingsSoon();
+
+  // 選んだプリセットが画面外にあるときはスクロールして見せる
+  const btn = document.querySelector(`.preset[data-i="${i}"]`);
+  if(btn) btn.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
 }
 
 function buildSliders(){
@@ -1106,6 +1243,19 @@ function buildSliders(){
   make(PARAM_DEFS.vhs, 'vhsFields');
   make(PARAM_DEFS.glitch, 'glitchFields');
   make(PARAM_DEFS.color, 'colorFields');
+
+  const sel = document.getElementById('tintSelect');
+  sel.innerHTML = TINTS.map((t,i) => `<option value="${i}">${t.name}</option>`).join('');
+  sel.value = String(S.tintIdx);
+  sel.addEventListener('change', () => {
+    S.tintIdx = +sel.value;
+    // 「なし」以外を選んだのに強さが0なら、見えるところまで上げる
+    if(S.tintIdx > 0 && P.tint < 0.05){
+      P.tint = 0.5;
+      syncSliders();
+    }
+    saveSettingsSoon();
+  });
 }
 
 function syncSliders(){
@@ -1142,7 +1292,7 @@ function saveSettingsSoon(){
 function saveSettings(){
   try{
     localStorage.setItem(LS_KEY, JSON.stringify({
-      p: P, preset: S.preset, mirror: S.mirror, audio: S.audio,
+      p: P, preset: S.preset, tintIdx: S.tintIdx, mirror: S.mirror, audio: S.audio,
       osd: S.osd, auto: S.auto, resolution: S.resolution
     }));
   }catch(e){ /* プライベートブラウズなどでは保存しない */ }
@@ -1281,13 +1431,16 @@ function showWarn(html){
 }
 function errorMessage(err){
   const n = err && err.name;
+  const code = `<br><span style="opacity:.7;font-size:11px">エラー種別：${escapeHtml(n || '不明')}</span>`;
   if(n === 'NotAllowedError')
-    return 'カメラの使用が許可されませんでした。<br>Safariの「あぁ」ボタン →「Webサイトの設定」→ カメラを「許可」にしてから再読み込みしてください。';
+    return 'カメラの使用が許可されませんでした。<br>Safariのアドレスバー左の「あぁ」→「Webサイトの設定」→ カメラを「許可」にしてから、ページを再読み込みしてください。' + code;
   if(n === 'NotFoundError' || n === 'OverconstrainedError')
-    return '指定した条件のカメラが見つかりませんでした。設定から解像度を下げて試してください。';
-  if(n === 'NotReadableError')
-    return 'カメラが他のアプリに使用されています。他のアプリを閉じてから再試行してください。';
-  return 'カメラを起動できませんでした：' + (err && err.message ? escapeHtml(err.message) : '不明なエラー');
+    return '条件に合うカメラが見つかりませんでした。設定から解像度を下げて試してください。' + code;
+  if(n === 'NotReadableError' || n === 'AbortError')
+    return 'カメラを他のアプリ／他のタブが使用中です。<br>このアプリを2か所（Safariのタブとホーム画面のアプリなど）で同時に開いていないか、ビデオ通話などのアプリが起動していないか確認して、閉じてから再試行してください。' + code;
+  if(n === 'SecurityError')
+    return 'このページはカメラを使える状態で開かれていません。<code>https://</code> で始まるURLから開き直してください。' + code;
+  return 'カメラを起動できませんでした：' + (err && err.message ? escapeHtml(err.message) : '不明なエラー') + code;
 }
 
 /* ---------------- アプリ化（PWA） ---------------- */
@@ -1356,6 +1509,7 @@ function registerSW(){
     ['mirror','audio','osd','auto'].forEach(k => {
       if(typeof saved[k] === 'boolean') S[k] = saved[k];
     });
+    if(typeof saved.tintIdx === 'number' && TINTS[saved.tintIdx]) S.tintIdx = saved.tintIdx;
     if([480,720,1080].includes(saved.resolution)){
       S.resolution = saved.resolution;
       document.getElementById('resSelect').value = String(saved.resolution);
