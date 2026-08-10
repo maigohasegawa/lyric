@@ -81,7 +81,6 @@ def centroid(parts) -> tuple[float, float, float]:
 
 
 def check_model(label: str, parts) -> int:
-    center = centroid(parts)
     failures = 0
     for part in parts:
         a = analyse(part)
@@ -94,9 +93,13 @@ def check_model(label: str, parts) -> int:
             kind = "閉"
             if a["volume"] <= 0:
                 notes.append(f"面が内向き (体積 {a['volume']:+.4f})")
+        elif part.double_sided:
+            kind = "両"          # 両面マテリアルなので向きは問わない
         else:
             kind = "開"
-            ratio = outward_ratio(part, center)
+            # モデル全体ではなくパーツ自身の重心で見る。開いていても
+            # 何かを包む形（髪・上着・パンツ）なら法線は外を向くはず
+            ratio = outward_ratio(part, centroid([part]))
             if ratio < 0.6:
                 notes.append(f"外を向く面が {ratio:.0%} しかない")
 

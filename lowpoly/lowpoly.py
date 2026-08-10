@@ -28,7 +28,8 @@ class Part:
     """1 マテリアル分のメッシュ。頂点と三角形インデックスを持つ。"""
 
     def __init__(self, color: tuple[float, float, float], metallic=0.0, roughness=0.8,
-                 name="part", alpha=1.0, texture: bytes | None = None):
+                 name="part", alpha=1.0, texture: bytes | None = None,
+                 double_sided=False):
         self.verts: list[Vec] = []
         self.uvs: list[tuple[float, float]] = []
         self.tris: list[tuple[int, int, int]] = []
@@ -38,6 +39,9 @@ class Part:
         self.alpha = alpha
         self.name = name
         self.texture = texture          # PNG バイト列。GLB に同梱される
+        # 布や継ぎあてのような厚みのない板は両面にする。片面のままだと
+        # AE の Advanced 3D では裏から見たときに消えてしまう
+        self.double_sided = double_sided
 
     def add_vert(self, v: Vec, uv: tuple[float, float] = (0.0, 0.0)) -> int:
         self.verts.append(v)
@@ -70,7 +74,7 @@ class Part:
 
     def copy(self) -> "Part":
         clone = Part(self.color, self.metallic, self.roughness, self.name,
-                     self.alpha, self.texture)
+                     self.alpha, self.texture, self.double_sided)
         clone.verts = list(self.verts)
         clone.uvs = list(self.uvs)
         clone.tris = list(self.tris)
@@ -187,7 +191,8 @@ def write_glb(path: str, parts: list[Part], model_name="model") -> None:
             textures.append({"source": len(images) - 1, "sampler": 0})
             pbr["baseColorTexture"] = {"index": len(textures) - 1}
 
-        mat = {"name": part.name, "doubleSided": False, "pbrMetallicRoughness": pbr}
+        mat = {"name": part.name, "doubleSided": part.double_sided,
+               "pbrMetallicRoughness": pbr}
         if part.alpha < 1.0:
             mat["alphaMode"] = "BLEND"
         materials.append(mat)
@@ -406,6 +411,19 @@ def face_plate(part: Part, center: Vec, radii: Vec, yaw_span: float,
         for c in range(cols):
             part.add_face([grid[r][c], grid[r + 1][c],
                            grid[r + 1][c + 1], grid[r][c + 1]])
+
+
+def panel(part: Part, center: Vec, u: Vec, v: Vec, hu: float, hv: float) -> None:
+    """center を中心に、u/v が張る平面上の四角形。法線は u×v の向き。
+
+    継ぎあての布や、ぶら下げた洗濯物のような薄いものに使う。
+    """
+    def at(su: float, sv: float) -> int:
+        return part.add_vert((center[0] + u[0] * su * hu + v[0] * sv * hv,
+                              center[1] + u[1] * su * hu + v[1] * sv * hv,
+                              center[2] + u[2] * su * hu + v[2] * sv * hv))
+
+    part.add_face([at(-1, -1), at(1, -1), at(1, 1), at(-1, 1)])
 
 
 def filter_tris(part: Part, keep) -> None:

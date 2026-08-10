@@ -240,6 +240,11 @@ CAMERAS = {
 # キャラクターは正面・斜め・横・背面を並べて確認したい
 TURNAROUND = [0.0, 0.65, math.pi / 2, math.pi]
 
+# 顔まわりの寄り: 出力名 -> (モデル名, 視点, 注視点)
+CLOSEUPS = {
+    "heki-face": ("heki", (0.13, 0.95, 0.58), (0.0, 0.885, 0.0)),
+}
+
 
 def orbit(eye, target, angle: float):
     dx, dz = eye[0] - target[0], eye[2] - target[2]
@@ -251,15 +256,18 @@ def main(argv: list[str]) -> int:
     here = os.path.dirname(os.path.abspath(__file__))
     src, dst = os.path.join(here, "models"), os.path.join(here, "preview")
     os.makedirs(dst, exist_ok=True)
-    names = argv[1:] or list(CAMERAS)
+    names = argv[1:] or list(CAMERAS) + list(CLOSEUPS)
     for name in names:
-        eye, target = CAMERAS[name]
-        glb = os.path.join(src, f"{name}.glb")
+        if name in CLOSEUPS:
+            model, eye, target = CLOSEUPS[name]
+        else:
+            model, (eye, target) = name, CAMERAS[name]
+        glb = os.path.join(src, f"{model}.glb")
         if not os.path.exists(glb):
             print(f"skip {name}: {glb} がない（先に lowpoly.py / character.py を実行）")
             continue
         prims = read_glb(glb)
-        angles = TURNAROUND if name == "heki" else [0.0]
+        angles = TURNAROUND if name in ("heki",) else [0.0]
         for i, a in enumerate(angles):
             suffix = f"-{i}" if len(angles) > 1 else ""
             png = os.path.join(dst, f"{name}{suffix}.png")

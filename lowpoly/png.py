@@ -95,6 +95,29 @@ class Canvas:
                 self.capsule(prev[0], prev[1], p[0], p[1], width / 2, color, alpha)
             prev = p
 
+    def spiral(self, cx: float, cy: float, r0: float, r1: float, turns: float,
+               width: float, color: Color, steps: int = 96,
+               start: float = 0.0) -> None:
+        """アルキメデスの渦巻き。ぐるぐる目に使う。"""
+        prev = None
+        for k in range(steps + 1):
+            f = k / steps
+            a = start + turns * 2 * math.pi * f
+            r = r0 + (r1 - r0) * f
+            p = (cx + r * math.cos(a), cy + r * math.sin(a))
+            if prev:
+                self.capsule(prev[0], prev[1], p[0], p[1], width / 2, color)
+            prev = p
+
+    def teardrop(self, cx: float, cy: float, r: float, length: float,
+                 color: Color, steps: int = 18) -> None:
+        """上が丸く下が尖った形。地図のピンに。cy は丸い側の中心。"""
+        for k in range(steps + 1):
+            f = k / steps
+            rr = r * (1 - f) ** 0.75
+            if rr > 1e-6:                # 先端は半径 0 になるので描かない
+                self.ellipse(cx, cy + length * f, rr, rr, color)
+
     # -- 出力 ------------------------------------------------------------
     def _scan(self, x0, y0, x1, y1, color, inside, alpha=1.0) -> None:
         ss = self.ss
