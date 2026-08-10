@@ -67,6 +67,7 @@
     font-family:'JetBrains Mono',monospace;font-size:11px;
     letter-spacing:.12em;
     pointer-events:none;
+    overflow:hidden;
     z-index:10;
   }
   .badge{
@@ -75,9 +76,13 @@
     backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
     border-radius:20px;padding:5px 11px;
     display:flex;align-items:center;gap:7px;
+    white-space:nowrap;flex:0 0 auto;
   }
+  .badge.hide{display:none;}
   #recBadge{color:#fff;border-color:rgba(255,59,48,.55);background:rgba(60,10,10,.6);display:none;}
   #recBadge.on{display:flex;}
+  #recBadge.paused{border-color:rgba(242,183,5,.55);background:rgba(58,44,8,.62);}
+  #recBadge.paused .recdot{background:var(--c);}
   .recdot{width:8px;height:8px;border-radius:50%;background:var(--rec);animation:blink 1s steps(1,end) infinite;}
   @keyframes blink{50%{opacity:.15;}}
   #fps{margin-left:auto;color:var(--muted);}
@@ -145,6 +150,13 @@
     width:28px;height:28px;border-radius:7px;background:var(--rec);
   }
   #shutter.photo #shutterCore{background:#fff;}
+  #pauseBtn{display:none;color:var(--rec);border-color:rgba(255,59,48,.5);font-size:15px;}
+  #pauseBtn.on{display:flex;}
+  #pauseBtn.paused{color:#fff;border-color:rgba(255,255,255,.5);}
+  #settingsBtn.hide{display:none;}
+  #cutBadge,#speedBadge{display:none;}
+  #cutBadge.on,#speedBadge.on{display:flex;}
+  #speedBadge{color:var(--c);border-color:rgba(242,183,5,.45);}
   #glitchBtn{
     font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:0;
     color:var(--b);border-color:rgba(239,63,150,.5);
@@ -314,6 +326,52 @@
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
+  /* ---------- MODAL ---------- */
+  .modal{
+    position:fixed;inset:0;z-index:60;
+    background:rgba(6,6,10,.8);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    display:none;align-items:center;justify-content:center;padding:24px;
+  }
+  .modal.show{display:flex;}
+  .modal-box{
+    width:100%;max-width:340px;
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:20px;
+  }
+  .modal-box h3{margin:0 0 14px;font-size:15px;font-weight:900;}
+  .modal-note{margin:0 0 14px;color:var(--muted);font-size:12px;line-height:1.8;}
+  .modal-box input[type=text]{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:10px;color:var(--text);padding:12px 14px;
+    font-size:16px;font-family:inherit;
+  }
+  .modal-box input[type=text]:focus{outline:2px solid var(--a);outline-offset:1px;}
+  .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+  .modal-btns button{
+    font-size:13px;font-weight:700;padding:11px 18px;border-radius:22px;
+    border:1px solid var(--line);background:var(--panel-2);color:var(--text);
+  }
+  .modal-btns .primary{background:var(--text);color:#111;border-color:var(--text);}
+  .bar{height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden;}
+  .bar-in{height:100%;width:0%;background:var(--a);transition:width .2s linear;}
+
+  /* ---------- MY PRESET ---------- */
+  .row-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+  .mini-btn{
+    font-size:12.5px;font-weight:700;padding:10px 16px;border-radius:20px;
+    border:1px solid var(--line);background:var(--panel-2);color:var(--text);
+  }
+  .my-row{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;
+  }
+  .my-row:last-child{border-bottom:none;}
+  .my-row .del{
+    margin-left:auto;color:var(--muted);font-size:16px;padding:4px 10px;
+  }
+  .my-empty{color:var(--muted);font-size:12px;line-height:1.8;padding:2px 0 6px;}
+
   .flash{
     position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:35;
   }
@@ -331,7 +389,9 @@
 
 <div id="topbar">
   <div class="badge" id="recBadge"><span class="recdot"></span><span id="recTime">0:00</span></div>
+  <div class="badge" id="cutBadge">CUT 1</div>
   <div class="badge" id="presetBadge">VHS 1984</div>
+  <div class="badge" id="speedBadge">0.5x</div>
   <div class="badge" id="fps">-- FPS</div>
 </div>
 
@@ -343,6 +403,7 @@
   </div>
   <div id="buttons">
     <button class="side-btn small" id="settingsBtn" aria-label="設定">⚙</button>
+    <button class="side-btn small" id="pauseBtn" aria-label="録画を一時停止">‖</button>
     <button class="side-btn small" id="galleryBtn" aria-label="直前の撮影">⤓</button>
     <button id="shutter" aria-label="撮影"><span id="shutterCore"></span></button>
     <button class="side-btn" id="glitchBtn" aria-label="グリッチ">GLITCH</button>
@@ -358,6 +419,28 @@
     <button class="close" id="sheetClose">閉じる</button>
   </div>
   <div class="sheet-body">
+    <div class="group-title">RECORDING</div>
+    <div class="field">
+      <label>録画速度<span class="val" id="speedVal"></span></label>
+      <select id="speedSelect">
+        <option value="0.25">0.25x 超スロー</option>
+        <option value="0.5">0.5x スロー</option>
+        <option value="1" selected>1x 標準</option>
+        <option value="2">2x 早回し</option>
+        <option value="4">4x 早回し（タイムラプス）</option>
+      </select>
+    </div>
+    <p class="sub-note" style="margin-top:-6px">
+      標準以外を選ぶと、録画を止めたあとに変換が入ります（スローは録画時間より長くかかります）。
+      速度を変えた映像は<b>音声なし</b>になります。
+    </p>
+
+    <div class="group-title">MY PRESET</div>
+    <div class="row-btns">
+      <button class="mini-btn" id="savePresetBtn">いまの設定に名前をつけて保存</button>
+    </div>
+    <div id="myList"></div>
+
     <div class="group-title">CAMERA</div>
     <div class="field">
       <label>カメラ<span class="val" id="camVal"></span></label>
@@ -426,6 +509,30 @@
     <button class="primary" id="shareBtn">共有 / 写真に保存</button>
     <button id="dlBtn">ダウンロード</button>
     <button id="resultClose">閉じる</button>
+  </div>
+</div>
+
+<!-- ---------- 名前をつけて保存 ---------- -->
+<div class="modal" id="nameModal">
+  <div class="modal-box">
+    <h3>この設定に名前をつける</h3>
+    <input type="text" id="nameInput" maxlength="18" placeholder="例：夕方の散歩" autocomplete="off">
+    <div class="modal-btns">
+      <button id="nameCancel">やめる</button>
+      <button class="primary" id="nameOk">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- 速度変換中 ---------- -->
+<div class="modal" id="convertModal">
+  <div class="modal-box">
+    <h3 id="convertTitle">変換中…</h3>
+    <p class="modal-note" id="convertNote">録画した映像の速度を変えています。この画面のままお待ちください。</p>
+    <div class="bar"><div class="bar-in" id="convertBar"></div></div>
+    <div class="modal-btns">
+      <button id="convertCancel">やめて元の速度で保存</button>
+    </div>
   </div>
 </div>
 
@@ -582,6 +689,8 @@ const S = {
   mirror:false, audio:true, osd:true, auto:false,
   mode:'video',
   tintIdx:0, symIdx:0,
+  speed:1,
+  presetId:'b:1',
   facing:'environment',
   deviceId:null,
   resolution:720,
@@ -1123,11 +1232,13 @@ function drawOSD(t){
   const time = `${ampm} ${two(hh)}:${two(d.getMinutes())}`;
   const date = `${two(d.getMonth()+1)}.${two(d.getDate())}.${String(d.getFullYear()).slice(2)}`;
 
-  // 左上：REC / PAUSE
-  const recText = recorder && recorder.state === 'recording'
-    ? (Math.floor(t*2) % 2 === 0 ? '● REC' : '  REC')
-    : '‖ PAUSE';
-  chroma(recText, pad, pad, recorder && recorder.state === 'recording' ? '#ff4b3e' : '#ffffff', s);
+  // 左上：REC / PAUSE / STBY
+  const rs = recorder ? recorder.state : 'inactive';
+  const blink = Math.floor(t*2) % 2 === 0;
+  let recText = '■ STBY', recColor = '#ffffff';
+  if(rs === 'recording'){ recText = blink ? '● REC'   : '  REC';   recColor = '#ff4b3e'; }
+  else if(rs === 'paused'){ recText = blink ? '‖ PAUSE' : '  PAUSE'; recColor = '#ffd34d'; }
+  chroma(recText, pad, pad, recColor, s);
 
   // 右上：SP
   octx.textAlign = 'right';
@@ -1140,7 +1251,7 @@ function drawOSD(t){
 
   // 右下：タイムコード
   octx.textAlign = 'right';
-  const tc = recorder && recorder.state === 'recording' ? (performance.now() - recStart)/1000 : t;
+  const tc = (rs === 'recording' || rs === 'paused') ? recSeconds() : t;
   chroma(`${two(Math.floor(tc/60))}:${two(Math.floor(tc%60))}:${two(Math.floor((tc*30)%30))}`,
          w - pad, h - pad - fs*1.1, '#ffffff', s);
   octx.restore();
@@ -1165,7 +1276,7 @@ async function startCamera(){
   const videoC = {
     width:  {ideal: res.w},
     height: {ideal: res.h},
-    frameRate:{ideal:30}
+    frameRate:{ideal: S.speed < 1 ? 60 : 30}   // スロー撮影は高フレームレートのほうがなめらか
   };
   if(S.deviceId) videoC.deviceId = {exact: S.deviceId};
   else           videoC.facingMode = {ideal: S.facing};
@@ -1227,7 +1338,13 @@ async function flipCamera(){
 }
 
 /* ---------------- 録画 / 撮影 ---------------- */
-let recorder = null, chunks = [], recStart = 0, recTimer = null, lastBlob = null, lastName = '';
+let recorder = null, chunks = [], recTimer = null, lastBlob = null, lastName = '';
+let recPaused = false, recElapsed = 0, segStart = 0, cutCount = 1, lastRecSeconds = 0;
+
+// 一時停止を挟んだ実録画時間（秒）
+function recSeconds(){
+  return (recElapsed + (recPaused ? 0 : performance.now() - segStart)) / 1000;
+}
 
 function pickMime(){
   const list = [
@@ -1263,30 +1380,234 @@ function startRec(){
   }
   chunks = [];
   recorder.ondataavailable = ev => { if(ev.data && ev.data.size) chunks.push(ev.data); };
-  recorder.onstop = () => {
+  recorder.onstop = async () => {
     const type = recorder.mimeType || mime || 'video/mp4';
     const ext  = type.includes('mp4') ? 'mp4' : 'webm';
-    lastBlob = new Blob(chunks, {type});
-    lastName = `vhscam_${stamp()}.${ext}`;
+    let blob = new Blob(chunks, {type});
+
+    if(S.speed !== 1 && blob.size > 0){
+      blob = await convertSpeed(blob, S.speed, type, lastRecSeconds);
+    }
+    lastBlob = blob;
+    lastName = `vhscam_${stamp()}${S.speed !== 1 ? '_' + String(S.speed).replace('.','') + 'x' : ''}.${ext}`;
     showResult(lastBlob, 'video');
   };
   recorder.start(200);
-  recStart = performance.now();
+
+  recPaused = false;
+  recElapsed = 0;
+  segStart = performance.now();
+  cutCount = 1;
   requestWakeLock();
+
   document.getElementById('shutter').classList.add('recording');
   document.getElementById('recBadge').classList.add('on');
+  document.getElementById('settingsBtn').classList.add('hide');
+  document.getElementById('presetBadge').classList.add('hide');   // 上の帯が詰まるので録画中は隠す
+  document.getElementById('pauseBtn').classList.toggle('on', canPause());
+  updateCutBadge();
+
   recTimer = setInterval(() => {
-    const s = Math.floor((performance.now() - recStart)/1000);
+    const s = Math.floor(recSeconds());
     document.getElementById('recTime').textContent = `${Math.floor(s/60)}:${two(s%60)}`;
   }, 250);
 }
 
+function canPause(){
+  return !!(recorder && typeof recorder.pause === 'function' && typeof recorder.resume === 'function');
+}
+
+// ストップウォッチのラップのように、録画を止めずに区切る
+function togglePause(){
+  if(!recorder || recorder.state === 'inactive') return;
+  if(!canPause()){ toast('この端末では一時停止に対応していません'); return; }
+
+  const btn = document.getElementById('pauseBtn');
+  if(!recPaused){
+    recorder.pause();
+    recElapsed += performance.now() - segStart;
+    recPaused = true;
+    btn.textContent = '▶';
+    btn.classList.add('paused');
+    btn.setAttribute('aria-label', '録画を再開');
+    document.getElementById('recBadge').classList.add('paused');
+  }else{
+    recorder.resume();
+    segStart = performance.now();
+    recPaused = false;
+    cutCount++;
+    btn.textContent = '‖';
+    btn.classList.remove('paused');
+    btn.setAttribute('aria-label', '録画を一時停止');
+    document.getElementById('recBadge').classList.remove('paused');
+    updateCutBadge();
+  }
+}
+
+function updateCutBadge(){
+  const el = document.getElementById('cutBadge');
+  el.textContent = `CUT ${cutCount}`;
+  el.classList.toggle('on', cutCount > 1 || (recorder && recorder.state !== 'inactive'));
+}
+
 function stopRec(){
-  if(recorder && recorder.state !== 'inactive') recorder.stop();
+  if(recorder && recorder.state !== 'inactive'){
+    lastRecSeconds = recSeconds();     // 変換の進み具合を出すために実録画時間を控えておく
+    if(recPaused) recorder.resume();   // 一時停止のまま stop すると出力されない環境がある
+    recorder.stop();
+  }
   clearInterval(recTimer);
   releaseWakeLock();
+  recPaused = false;
+  const btn = document.getElementById('pauseBtn');
+  btn.textContent = '‖';
+  btn.classList.remove('on', 'paused');
+  document.getElementById('settingsBtn').classList.remove('hide');
+  document.getElementById('presetBadge').classList.remove('hide');
   document.getElementById('shutter').classList.remove('recording');
-  document.getElementById('recBadge').classList.remove('on');
+  document.getElementById('recBadge').classList.remove('on', 'paused');
+  document.getElementById('cutBadge').classList.remove('on');
+}
+
+/* ---------------- 速度変換（スロー／早回し） ---------------- */
+let convertCancelled = false;
+
+function convertSpeed(blob, speed, type, hintSeconds){
+  return new Promise(resolve => {
+    const modal = document.getElementById('convertModal');
+    const bar   = document.getElementById('convertBar');
+    const title = document.getElementById('convertTitle');
+    const note  = document.getElementById('convertNote');
+    title.textContent = (speed < 1 ? 'スローに変換中…' : '早回しに変換中…');
+    const waitSec = hintSeconds ? Math.ceil(hintSeconds / speed) : 0;
+    note.textContent = waitSec
+      ? `およそ${waitSec}秒かかります。この画面のままお待ちください。`
+      : '録画した映像の速度を変えています。この画面のままお待ちください。';
+    bar.style.width = '0%';
+    modal.classList.add('show');
+    convertCancelled = false;
+
+    const finish = (result) => {
+      modal.classList.remove('show');
+      cleanup();
+      resolve(result);
+    };
+
+    const v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.preload = 'auto';
+    v.setAttribute('playsinline', '');
+    const srcUrl = URL.createObjectURL(blob);
+    v.src = srcUrl;
+
+    let raf = null, rec = null, started = performance.now();
+    const cleanup = () => {
+      if(raf) cancelAnimationFrame(raf);
+      try{ v.pause(); }catch(e){}
+      URL.revokeObjectURL(srcUrl);
+    };
+
+    document.getElementById('convertCancel').onclick = () => {
+      convertCancelled = true;
+      try{ if(rec && rec.state !== 'inactive') rec.stop(); }catch(e){}
+      finish(blob);                       // 元の速度のまま返す
+    };
+
+    v.onerror = () => finish(blob);
+
+    /* MediaRecorderが作った動画は長さが未確定（0やInfinity）のことがある。
+       いったん末尾までシークさせて実際の長さを確定させる。 */
+    function resolveDuration(){
+      return new Promise(res => {
+        if(isFinite(v.duration) && v.duration > 0) return res(v.duration);
+        let done = false;
+        const onDur = () => {
+          if(done || !isFinite(v.duration) || v.duration <= 0) return;
+          done = true;
+          v.removeEventListener('durationchange', onDur);
+          v.currentTime = 0;
+          res(v.duration);
+        };
+        v.addEventListener('durationchange', onDur);
+        try{ v.currentTime = 1e101; }catch(e){}
+        setTimeout(() => {
+          if(done) return;
+          done = true;
+          v.removeEventListener('durationchange', onDur);
+          try{ v.currentTime = 0; }catch(e){}
+          res(isFinite(v.duration) && v.duration > 0 ? v.duration : 0);
+        }, 2000);
+      });
+    }
+
+    v.onloadedmetadata = async () => {
+      const w = v.videoWidth, h = v.videoHeight;
+      if(!w || !h){ finish(blob); return; }
+
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const cx = cv.getContext('2d', {alpha:false});
+      const out = cv.captureStream(30);
+      const mime = pickMime();
+      try{
+        rec = mime ? new MediaRecorder(out, {mimeType:mime, videoBitsPerSecond:8_000_000})
+                   : new MediaRecorder(out);
+      }catch(e){ finish(blob); return; }
+
+      const parts = [];
+      rec.ondataavailable = ev => { if(ev.data && ev.data.size) parts.push(ev.data); };
+      rec.onstop = () => {
+        if(convertCancelled) return;
+        const res = (parts.length && parts.reduce((n,p) => n + p.size, 0) > 1024)
+          ? new Blob(parts, {type: rec.mimeType || type})
+          : blob;                                    // 変換に失敗したら元の映像を残す
+        finish(res);
+      };
+
+      // 録画時間が分かっていればそれを使う（長さの確定待ちを省ける）
+      const dur = hintSeconds > 0.2 ? hintSeconds : await resolveDuration();
+      if(convertCancelled) return;
+      const estimate = dur ? (dur / speed) * 1000 : 0;
+
+      const draw = () => {
+        cx.drawImage(v, 0, 0, w, h);
+        const prog = dur ? (v.currentTime / dur)
+                         : (estimate ? (performance.now() - started) / estimate : 0);
+        bar.style.width = Math.min(99, Math.max(0, prog * 100)).toFixed(0) + '%';
+        raf = requestAnimationFrame(draw);
+      };
+
+      // 終了処理は ended・再生停滞の見張り・どちらから来ても1回だけ動かす
+      let ending = false;
+      const endNow = () => {
+        if(ending) return;
+        ending = true;
+        clearInterval(watchdog);
+        bar.style.width = '100%';
+        setTimeout(() => {
+          if(raf) cancelAnimationFrame(raf);
+          try{ if(rec.state !== 'inactive') rec.stop(); else finish(blob); }
+          catch(e){ finish(blob); }
+        }, 150);
+      };
+      v.onended = endNow;
+
+      // 長さが取れない動画でも止まらないよう、再生位置が進まなくなったら終わりとみなす
+      let seen = -1, stalled = 0;
+      const watchdog = setInterval(() => {
+        if(v.currentTime === seen) stalled += 250; else { stalled = 0; seen = v.currentTime; }
+        if(dur && v.currentTime >= dur - 0.05) endNow();
+        if(stalled >= 1200 && performance.now() - started > 1500) endNow();
+      }, 250);
+
+      v.playbackRate = speed;
+      try{ await v.play(); }
+      catch(e){ clearInterval(watchdog); finish(blob); return; }
+
+      rec.start(200);
+      started = performance.now();
+      draw();
+    };
+  });
 }
 
 function takePhoto(){
@@ -1343,6 +1664,53 @@ function downloadResult(){
 }
 
 /* ---------------- UI 構築 ---------------- */
+/* ---------------- マイプリセット ---------------- */
+const MY_KEY = 'vhscam.myPresets.v1';
+let MY = [];
+
+function loadMyPresets(){
+  try{
+    const raw = localStorage.getItem(MY_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch(e){ return []; }
+}
+function saveMyPresets(){
+  try{ localStorage.setItem(MY_KEY, JSON.stringify(MY)); }catch(e){}
+}
+function addMyPreset(name){
+  MY.push({name, p: Object.assign({}, P), tintIdx: S.tintIdx, symIdx: S.symIdx});
+  saveMyPresets();
+  buildPresets();
+  buildMyList();
+  applyPreset('m:' + (MY.length - 1));
+  toast(`「${name}」を保存しました`);
+}
+function removeMyPreset(i){
+  const name = MY[i].name;
+  MY.splice(i, 1);
+  saveMyPresets();
+  if(S.presetId === 'm:' + i) S.presetId = null;
+  buildPresets();
+  buildMyList();
+  markActivePreset();
+  toast(`「${name}」を削除しました`);
+}
+function buildMyList(){
+  const el = document.getElementById('myList');
+  if(MY.length === 0){
+    el.innerHTML = `<div class="my-empty">まだありません。スライダーを好みに調整してから、上のボタンで保存できます。保存した設定はプリセット一覧の「マイ」に並びます。</div>`;
+    return;
+  }
+  el.innerHTML = MY.map((m,i) =>
+    `<div class="my-row"><span>${escapeHtml(m.name)}</span>
+       <button class="del" data-i="${i}" aria-label="削除">✕</button></div>`).join('');
+  el.querySelectorAll('.del').forEach(b => {
+    b.addEventListener('click', () => removeMyPreset(+b.dataset.i));
+  });
+}
+
+/* ---------------- プリセット一覧 ---------------- */
 function buildPresets(){
   const el = document.getElementById('presets');
   let group = null, html = '';
@@ -1351,32 +1719,49 @@ function buildPresets(){
       group = p.group;
       html += `<span class="preset-group">${group}</span>`;
     }
-    html += `<button class="preset" data-i="${i}">${p.name}</button>`;
+    html += `<button class="preset" data-id="b:${i}">${escapeHtml(p.name)}</button>`;
   });
+  if(MY.length){
+    html += `<span class="preset-group">マイ</span>`;
+    html += MY.map((m,i) => `<button class="preset" data-id="m:${i}">${escapeHtml(m.name)}</button>`).join('');
+  }
   el.innerHTML = html;
   el.querySelectorAll('.preset').forEach(b => {
-    b.addEventListener('click', () => applyPreset(+b.dataset.i));
+    b.addEventListener('click', () => applyPreset(b.dataset.id));
   });
 }
 
-function applyPreset(i){
-  S.preset = i;
-  Object.assign(P, BASE, PRESETS[i].p);
-  S.tintIdx = PRESETS[i].tintIdx || 0;
-  S.symIdx  = PRESETS[i].symIdx  || 0;
+function getPreset(id){
+  if(!id) return null;
+  const [kind, n] = id.split(':');
+  return kind === 'm' ? MY[+n] : PRESETS[+n];
+}
+
+function markActivePreset(){
   document.querySelectorAll('.preset').forEach(b => {
-    b.classList.toggle('active', +b.dataset.i === i);
+    b.classList.toggle('active', b.dataset.id === S.presetId);
   });
+}
+
+function applyPreset(id){
+  const preset = getPreset(id);
+  if(!preset) return;
+  S.presetId = id;
+  Object.assign(P, BASE, preset.p);
+  S.tintIdx = preset.tintIdx || 0;
+  S.symIdx  = preset.symIdx  || 0;
+
+  markActivePreset();
   const sel = document.getElementById('tintSelect');
   if(sel) sel.value = String(S.tintIdx);
   const sym = document.getElementById('symSelect');
   if(sym) sym.value = String(S.symIdx);
-  document.getElementById('presetBadge').textContent = PRESETS[i].name;
+  document.getElementById('presetBadge').textContent = preset.name;
   syncSliders();
   saveSettingsSoon();
 
   // 選んだプリセットが画面外にあるときはスクロールして見せる
-  const btn = document.querySelector(`.preset[data-i="${i}"]`);
+  const btn = document.querySelector(`.preset[data-id="${id}"]`);
   if(btn) btn.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
 }
 
@@ -1455,7 +1840,8 @@ function saveSettingsSoon(){
 function saveSettings(){
   try{
     localStorage.setItem(LS_KEY, JSON.stringify({
-      p: P, preset: S.preset, tintIdx: S.tintIdx, symIdx: S.symIdx, mirror: S.mirror, audio: S.audio,
+      p: P, presetId: S.presetId, tintIdx: S.tintIdx, symIdx: S.symIdx,
+      mirror: S.mirror, audio: S.audio, speed: S.speed,
       osd: S.osd, auto: S.auto, resolution: S.resolution
     }));
   }catch(e){ /* プライベートブラウズなどでは保存しない */ }
@@ -1499,6 +1885,50 @@ document.querySelectorAll('.mode').forEach(b => {
     document.getElementById('shutter').classList.toggle('photo', S.mode === 'photo');
   });
 });
+
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+
+document.getElementById('speedSelect').addEventListener('change', async e => {
+  if(recorder && recorder.state !== 'inactive'){
+    e.target.value = String(S.speed);
+    toast('録画中は変更できません');
+    return;
+  }
+  const prev = S.speed;
+  S.speed = parseFloat(e.target.value);
+  updateSpeedBadge();
+  saveSettingsSoon();
+  // スローはカメラを60fpsで回したほうがなめらかになる
+  if((prev < 1) !== (S.speed < 1)){
+    try{ await startCamera(); }catch(err){ toast('カメラを再起動できませんでした'); }
+  }
+});
+
+function updateSpeedBadge(){
+  const el = document.getElementById('speedBadge');
+  el.textContent = S.speed + 'x';
+  el.classList.toggle('on', S.speed !== 1);
+  document.getElementById('speedVal').textContent = S.speed === 1 ? '' : (S.speed < 1 ? 'スロー' : '早回し');
+}
+
+/* 名前をつけて保存 */
+const nameModal = document.getElementById('nameModal');
+const nameInput = document.getElementById('nameInput');
+document.getElementById('savePresetBtn').addEventListener('click', () => {
+  const base = getPreset(S.presetId);
+  nameInput.value = '';
+  nameInput.placeholder = base ? `例：${base.name} 調整` : '例：夕方の散歩';
+  nameModal.classList.add('show');
+  setTimeout(() => nameInput.focus(), 60);
+});
+document.getElementById('nameCancel').addEventListener('click', () => nameModal.classList.remove('show'));
+document.getElementById('nameOk').addEventListener('click', commitName);
+nameInput.addEventListener('keydown', e => { if(e.key === 'Enter') commitName(); });
+function commitName(){
+  const name = nameInput.value.trim() || `マイ設定 ${MY.length + 1}`;
+  nameModal.classList.remove('show');
+  addMyPreset(name);
+}
 
 document.getElementById('flipBtn').addEventListener('click', flipCamera);
 document.getElementById('settingsBtn').addEventListener('click', () => {
@@ -1663,8 +2093,17 @@ function registerSW(){
 (function init(){
   const saved = loadSettings();
 
+  MY = loadMyPresets();
   buildPresets();
-  applyPreset(saved && typeof saved.preset === 'number' ? saved.preset : S.preset);
+
+  // 保存済みのプリセット（古い形式の数値にも対応）
+  let startId = S.presetId;
+  if(saved){
+    if(typeof saved.presetId === 'string' && getPreset(saved.presetId)) startId = saved.presetId;
+    else if(typeof saved.preset === 'number' && PRESETS[saved.preset]) startId = 'b:' + saved.preset;
+  }
+  applyPreset(startId);
+
   if(saved){
     if(saved.p) ALL_PARAMS.forEach(d => {
       if(typeof saved.p[d.key] === 'number') P[d.key] = saved.p[d.key];
@@ -1674,14 +2113,18 @@ function registerSW(){
     });
     if(typeof saved.tintIdx === 'number' && TINTS[saved.tintIdx]) S.tintIdx = saved.tintIdx;
     if(typeof saved.symIdx  === 'number' && SYMS[saved.symIdx])   S.symIdx  = saved.symIdx;
+    if([0.25,0.5,1,2,4].includes(saved.speed)) S.speed = saved.speed;
     if([480,720,1080].includes(saved.resolution)){
       S.resolution = saved.resolution;
       document.getElementById('resSelect').value = String(saved.resolution);
     }
   }
   buildSliders();
+  buildMyList();
   syncSliders();
   syncSwitches();
+  document.getElementById('speedSelect').value = String(S.speed);
+  updateSpeedBadge();
 
   const secure = location.protocol === 'https:' ||
                  ['localhost','127.0.0.1'].includes(location.hostname) ||
