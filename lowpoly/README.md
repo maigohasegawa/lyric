@@ -4,8 +4,9 @@ Blender も外部ライブラリも使わず、Python 標準ライブラリだ�
 glTF 2.0 バイナリ（`.glb`）を書き出します。AE にそのまま読み込めます。
 
 ```bash
-python3 lowpoly/lowpoly.py            # models/ に全モデルを書き出し
+python3 lowpoly/lowpoly.py            # 背景モデルを models/ に書き出し
 python3 lowpoly/lowpoly.py crystal    # 個別に書き出し
+python3 lowpoly/character.py          # キャラクターを書き出し
 python3 lowpoly/check.py              # 面の向き・退化三角形の自己診断
 python3 lowpoly/preview.py            # preview/ に PNG プレビューを描画
 ```
@@ -14,12 +15,26 @@ python3 lowpoly/preview.py            # preview/ に PNG プレビューを描�
 
 | モデル | ファイル | ポリゴン | マテリアル |
 |---|---|---|---|
-| クリスタル群 | `models/crystal.glb` | 112 | 半透明シアン / マゼンタの発光体 |
+| クリスタル群 | `models/crystal.glb` | 96 | 半透明シアン / マゼンタの発光体 |
 | 山（地形） | `models/terrain.glb` | 648 | 岩 / 草 / 雪（標高で自動振り分け） |
 | 針葉樹 | `models/tree.glb` | 52 | 幹 / 葉 |
 | 環のある惑星 | `models/planet.glb` | 192 | 本体 / 環 |
+| キャラクター | `models/heki.glb` | 1255 | 肌 / 顔 / 髪 / 服 / 靴 など 8 種 |
 
 いずれも 1 ユニット前後のサイズ、Y 軸が上、原点が接地面（惑星のみ中心）です。
+
+## キャラクター（character.py）
+
+5 頭身・A ポーズ・顔はテクスチャという構成。**シルエットと配色は
+`SPEC` の数値だけで決まる**ので、資料に合わせるときはそこを書き換えます。
+
+- 体格は `head_h`（身長 ÷ 頭身）を 1 とした比率で持つので、頭身を変えても崩れない
+- 顔は `face_texture()` が手続き的に描く 256px の PNG。GLB に同梱されるので
+  外部ファイルは増えない
+- 髪はキャップ（球から顔の窓を抜いたもの）＋前髪＋後ろ髪＋サイドの束
+
+現在の `SPEC` は資料待ちのベース設定で、配色は LAYER SONG ツールの
+パレット（シアン `#12c2d6` / マゼンタ `#ef3f96` / 濃紺 `#20212b`）を流用しています。
 
 ## AE での使い方
 
@@ -55,9 +70,16 @@ MODELS["pillar"] = (make_pillar, "低ポリ 石柱")
 ```
 
 使えるプリミティブは `prism`（角柱・円錐台・尖端）、`cone`、`ring`（穴あきの環）、
-`icosphere`（`jitter` を上げると岩になる）、`_value_noise`（地形の高さ）です。
-`Part.transform()` は拡大・傾き・Y 回転・平行移動、`Part.merge()` は
-別パーツの取り込みに使います。
+`loft`（楕円断面の積み上げ。胴や腕）、`box`、`icosphere`（`jitter` を上げると岩）、
+`face_plate`（UV 付きの曲面板）、`_value_noise`（地形の高さ）です。
+`Part` は `transform()`（拡大・X/Z/Y 回転・平行移動）、`scale_xyz()`、
+`mirror_x()`、`merge()`、`copy()`、`filter_tris()` で組み立てます。
 
-追加したら必ず `check.py` を通してください。glTF バリデータは
-巻き方向を検証しないので、裏返りはここでしか捕まりません。
+形を積み重ねるときは **`phase` を揃える**こと。片方だけ `twist` が
+掛かっているとリング状の隙間が空きます。
+
+追加したら必ず `check.py` を通してください。glTF バリデータは巻き方向を
+検証しないので、裏返りと内部に埋まった無駄な面はここでしか捕まりません。
+検査は 3 つ: 退化三角形、有向辺の対応（＝隣り合う面の巻き方向が揃っているか）、
+閉じたメッシュなら符号付き体積が正か。頂点はフラットシェーディングのため
+面ごとに複製されているので、辺の照合は添字ではなく座標で行っています。

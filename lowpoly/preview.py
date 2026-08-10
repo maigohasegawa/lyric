@@ -17,8 +17,51 @@ import struct
 import sys
 import zlib
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+from png import write_png
+
 W = H = 520
 BG = (18, 18, 24)
+
+
+def decode_png(data: bytes) -> tuple[int, int, bytearray]:
+    """8bit RGB・非インターレースの PNG を復号する（このリポジトリが出す形式）。"""
+    pos, idat, w, h = 8, bytearray(), 0, 0
+    while pos < len(data):
+        length = struct.unpack_from(">I", data, pos)[0]
+        tag = data[pos + 4:pos + 8]
+        body = data[pos + 8:pos + 8 + length]
+        if tag == b"IHDR":
+            w, h, depth, color = struct.unpack_from(">IIBB", body, 0)
+            assert depth == 8 and color == 2, "8bit RGB のみ対応"
+        elif tag == b"IDAT":
+            idat += body
+        pos += 12 + length
+
+    raw = zlib.decompress(bytes(idat))
+    out = bytearray(w * h * 3)
+    stride = w * 3
+    for y in range(h):
+        f = raw[y * (stride + 1)]
+        line = raw[y * (stride + 1) + 1: (y + 1) * (stride + 1)]
+        for i in range(stride):
+            a = out[y * stride + i - 3] if i >= 3 else 0
+            b = out[(y - 1) * stride + i] if y > 0 else 0
+            c = out[(y - 1) * stride + i - 3] if (y > 0 and i >= 3) else 0
+            x = line[i]
+            if f == 1:
+                x += a
+            elif f == 2:
+                x += b
+            elif f == 3:
+                x += (a + b) // 2
+            elif f == 4:
+                p = a + b - c
+                pa, pb, pc = abs(p - a), abs(p - b), abs(p - c)
+                x += a if (pa <= pb and pa <= pc) else (b if pb <= pc else c)
+            out[y * stride + i] = x & 0xFF
+    return w, h, out
 
 
 # --------------------------------------------------------------------------
@@ -44,20 +87,32 @@ def read_glb(path: str) -> list[dict]:
         acc = gltf["accessors"][i]
         view = gltf["bufferViews"][acc["bufferView"]]
         base = view.get("byteOffset", 0) + acc.get("byteOffset", 0)
-        n = {"VEC3": 3, "SCALAR": 1}[acc["type"]]
+        n = {"VEC3": 3, "VEC2": 2, "SCALAR": 1}[acc["type"]]
         fmt = {5126: "f", 5125: "I", 5123: "H"}[acc["componentType"]]
         vals = struct.unpack_from(f"<{acc['count'] * n}{fmt}", buf, base)
         return [vals[k:k + n] for k in range(0, len(vals), n)] if n > 1 else list(vals)
 
+    def read_image(tex_index: int):
+        src = gltf["textures"][tex_index]["source"]
+        view = gltf["bufferViews"][gltf["images"][src]["bufferView"]]
+        off = view.get("byteOffset", 0)
+        return decode_png(buf[off: off + view["byteLength"]])
+
     prims = []
     for prim in gltf["meshes"][0]["primitives"]:
         mat = gltf["materials"][prim["material"]]["pbrMetallicRoughness"]
-        prims.append({
+        entry = {
             "pos": read_accessor(prim["attributes"]["POSITION"]),
             "nrm": read_accessor(prim["attributes"]["NORMAL"]),
             "idx": read_accessor(prim["indices"]),
             "color": mat["baseColorFactor"][:3],
-        })
+            "uv": None,
+            "tex": None,
+        }
+        if "baseColorTexture" in mat:
+            entry["uv"] = read_accessor(prim["attributes"]["TEXCOORD_0"])
+            entry["tex"] = read_image(mat["baseColorTexture"]["index"])
+        prims.append(entry)
     return prims
 
 
@@ -91,6 +146,8 @@ def render(prims: list[dict], eye, target) -> bytearray:
     frame = bytearray(BG * (W * H))
     depth = [float("inf")] * (W * H)
 
+    to_linear = [(v / 255) ** 2.2 for v in range(256)]
+
     for prim in prims:
         for t in range(0, len(prim["idx"]), 3):
             tri = [prim["pos"][prim["idx"][t + k]] for k in range(3)]
@@ -111,13 +168,23 @@ def render(prims: list[dict], eye, target) -> bytearray:
 
             lam = max(0.0, _dot(n, light))
             shade = 0.22 + 0.78 * lam                # 環境光 + ディフューズ
-            rgb = tuple(min(255, int(255 * (c ** 0.4545) * shade))
-                        for c in prim["color"])
-            _raster(frame, depth, scr, rgb)
+
+            if prim["tex"] is None:
+                rgb = tuple(min(255, int(255 * (c ** 0.4545) * shade))
+                            for c in prim["color"])
+                _raster(frame, depth, scr, rgb)
+            else:
+                # フラットシェーディングなので陰影は面ごとに一定。
+                # sRGB 8bit → リニア → 陰影 → sRGB の変換表を面ごとに作れば
+                # ピクセルごとの pow を避けられる
+                lut = bytes(min(255, int(255 * (to_linear[v] * shade) ** 0.4545))
+                            for v in range(256))
+                uvs = [prim["uv"][prim["idx"][t + k]] for k in range(3)]
+                _raster(frame, depth, scr, None, uvs, prim["tex"], lut)
     return frame
 
 
-def _raster(frame, depth, scr, rgb):
+def _raster(frame, depth, scr, rgb, uvs=None, tex=None, lut=None):
     (x0, y0, z0), (x1, y1, z1), (x2, y2, z2) = scr
     area = (x1 - x0) * (y2 - y0) - (x2 - x0) * (y1 - y0)
     if abs(area) < 1e-9:
@@ -126,6 +193,10 @@ def _raster(frame, depth, scr, rgb):
     hi_x = min(W - 1, int(max(x0, x1, x2)) + 1)
     lo_y = max(0, int(min(y0, y1, y2)))
     hi_y = min(H - 1, int(max(y0, y1, y2)) + 1)
+    flat = bytes(rgb) if rgb else None
+    if tex is not None:
+        tw, th, texels = tex
+        iz0, iz1, iz2 = 1 / z0, 1 / z1, 1 / z2
 
     for py in range(lo_y, hi_y + 1):
         cy = py + 0.5
@@ -138,27 +209,24 @@ def _raster(frame, depth, scr, rgb):
                 continue
             z = w0 * z0 + w1 * z1 + w2 * z2
             k = py * W + px
-            if z < depth[k]:
-                depth[k] = z
-                frame[k * 3:k * 3 + 3] = bytes(rgb)
-
-
-# --------------------------------------------------------------------------
-# PNG 出力
-# --------------------------------------------------------------------------
-
-def write_png(path: str, frame: bytearray) -> None:
-    raw = b"".join(b"\x00" + bytes(frame[y * W * 3:(y + 1) * W * 3]) for y in range(H))
-
-    def chunk(tag: bytes, body: bytes) -> bytes:
-        return (struct.pack(">I", len(body)) + tag + body
-                + struct.pack(">I", zlib.crc32(tag + body) & 0xFFFFFFFF))
-
-    with open(path, "wb") as f:
-        f.write(b"\x89PNG\r\n\x1a\n")
-        f.write(chunk(b"IHDR", struct.pack(">IIBBBBB", W, H, 8, 2, 0, 0, 0)))
-        f.write(chunk(b"IDAT", zlib.compress(raw, 9)))
-        f.write(chunk(b"IEND", b""))
+            if z >= depth[k]:
+                continue
+            depth[k] = z
+            if flat is not None:
+                frame[k * 3:k * 3 + 3] = flat
+                continue
+            # UV は遠近補正して引く（1/z で重みを付け直す）
+            iz = w0 * iz0 + w1 * iz1 + w2 * iz2
+            uu = (w0 * uvs[0][0] * iz0 + w1 * uvs[1][0] * iz1
+                  + w2 * uvs[2][0] * iz2) / iz
+            vv = (w0 * uvs[0][1] * iz0 + w1 * uvs[1][1] * iz1
+                  + w2 * uvs[2][1] * iz2) / iz
+            tx = min(tw - 1, max(0, int(uu * tw)))
+            ty = min(th - 1, max(0, int(vv * th)))
+            j = (ty * tw + tx) * 3
+            frame[k * 3] = lut[texels[j]]
+            frame[k * 3 + 1] = lut[texels[j + 1]]
+            frame[k * 3 + 2] = lut[texels[j + 2]]
 
 
 CAMERAS = {
@@ -166,23 +234,39 @@ CAMERAS = {
     "terrain": ((2.3, 1.9, 2.6), (0.0, 0.15, 0.0)),
     "tree":    ((1.9, 1.4, 2.2), (0.0, 0.55, 0.0)),
     "planet":  ((2.1, 1.3, 2.4), (0.0, 0.0, 0.0)),
+    "heki":    ((0.55, 0.85, 2.55), (0.0, 0.52, 0.0)),
 }
 
+# キャラクターは正面・斜め・横・背面を並べて確認したい
+TURNAROUND = [0.0, 0.65, math.pi / 2, math.pi]
 
-def main() -> int:
+
+def orbit(eye, target, angle: float):
+    dx, dz = eye[0] - target[0], eye[2] - target[2]
+    c, s = math.cos(angle), math.sin(angle)
+    return (target[0] + dx * c - dz * s, eye[1], target[2] + dx * s + dz * c)
+
+
+def main(argv: list[str]) -> int:
     here = os.path.dirname(os.path.abspath(__file__))
     src, dst = os.path.join(here, "models"), os.path.join(here, "preview")
     os.makedirs(dst, exist_ok=True)
-    for name, (eye, target) in CAMERAS.items():
+    names = argv[1:] or list(CAMERAS)
+    for name in names:
+        eye, target = CAMERAS[name]
         glb = os.path.join(src, f"{name}.glb")
         if not os.path.exists(glb):
-            print(f"skip {name}: {glb} がない（先に lowpoly.py を実行）")
+            print(f"skip {name}: {glb} がない（先に lowpoly.py / character.py を実行）")
             continue
-        png = os.path.join(dst, f"{name}.png")
-        write_png(png, render(read_glb(glb), eye, target))
-        print(f"{png}  ({os.path.getsize(png)/1024:.1f} KB)")
+        prims = read_glb(glb)
+        angles = TURNAROUND if name == "heki" else [0.0]
+        for i, a in enumerate(angles):
+            suffix = f"-{i}" if len(angles) > 1 else ""
+            png = os.path.join(dst, f"{name}{suffix}.png")
+            write_png(png, W, H, render(prims, orbit(eye, target, a), target))
+            print(f"{png}  ({os.path.getsize(png)/1024:.1f} KB)")
     return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(sys.argv))

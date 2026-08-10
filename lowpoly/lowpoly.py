@@ -28,17 +28,20 @@ class Part:
     """1 マテリアル分のメッシュ。頂点と三角形インデックスを持つ。"""
 
     def __init__(self, color: tuple[float, float, float], metallic=0.0, roughness=0.8,
-                 name="part", alpha=1.0):
+                 name="part", alpha=1.0, texture: bytes | None = None):
         self.verts: list[Vec] = []
+        self.uvs: list[tuple[float, float]] = []
         self.tris: list[tuple[int, int, int]] = []
         self.color = color
         self.metallic = metallic
         self.roughness = roughness
         self.alpha = alpha
         self.name = name
+        self.texture = texture          # PNG バイト列。GLB に同梱される
 
-    def add_vert(self, v: Vec) -> int:
+    def add_vert(self, v: Vec, uv: tuple[float, float] = (0.0, 0.0)) -> int:
         self.verts.append(v)
+        self.uvs.append(uv)
         return len(self.verts) - 1
 
     def add_tri(self, a: int, b: int, c: int) -> None:
@@ -50,29 +53,51 @@ class Part:
             self.add_tri(idx[0], idx[i], idx[i + 1])
 
     def transform(self, scale=1.0, offset=(0.0, 0.0, 0.0), rot_y=0.0,
-                  tilt=0.0) -> "Part":
-        """拡大 → X 軸まわりに tilt → Y 軸まわりに rot_y → 平行移動。"""
+                  tilt=0.0, roll=0.0) -> "Part":
+        """拡大 → X 軸(tilt) → Z 軸(roll) → Y 軸(rot_y) の順に回して平行移動。"""
         cy, sy = math.cos(rot_y), math.sin(rot_y)
         ct, st = math.cos(tilt), math.sin(tilt)
+        cr, sr = math.cos(roll), math.sin(roll)
         out = []
         for x, y, z in self.verts:
             x, y, z = x * scale, y * scale, z * scale
-            y, z = y * ct - z * st, y * st + z * ct
-            x, z = x * cy - z * sy, x * sy + z * cy
+            y, z = y * ct - z * st, y * st + z * ct       # X 軸まわり
+            x, y = x * cr - y * sr, x * sr + y * cr       # Z 軸まわり
+            x, z = x * cy - z * sy, x * sy + z * cy       # Y 軸まわり
             out.append((x + offset[0], y + offset[1], z + offset[2]))
         self.verts = out
+        return self
+
+    def copy(self) -> "Part":
+        clone = Part(self.color, self.metallic, self.roughness, self.name,
+                     self.alpha, self.texture)
+        clone.verts = list(self.verts)
+        clone.uvs = list(self.uvs)
+        clone.tris = list(self.tris)
+        return clone
+
+    def scale_xyz(self, sx: float, sy: float, sz: float) -> "Part":
+        self.verts = [(x * sx, y * sy, z * sz) for x, y, z in self.verts]
+        return self
+
+    def mirror_x(self) -> "Part":
+        """X 反転。面が裏返るので巻き方向も入れ替える。"""
+        self.verts = [(-x, y, z) for x, y, z in self.verts]
+        self.tris = [(a, c, b) for a, b, c in self.tris]
         return self
 
     def merge(self, other: "Part") -> None:
         """別 Part のジオメトリを取り込む（マテリアルは自分のものを使う）。"""
         base = len(self.verts)
         self.verts.extend(other.verts)
+        self.uvs.extend(other.uvs)
         self.tris.extend([(a + base, b + base, c + base) for a, b, c in other.tris])
 
-    def flat_shaded(self) -> tuple[list[float], list[float], list[int]]:
+    def flat_shaded(self) -> tuple[list[float], list[float], list[float], list[int]]:
         """面ごとに頂点を複製し、面法線を付ける（＝ローポリ特有のカクカク陰影）。"""
         pos: list[float] = []
         nrm: list[float] = []
+        uv: list[float] = []
         idx: list[int] = []
         for a, b, c in self.tris:
             va, vb, vc = self.verts[a], self.verts[b], self.verts[c]
@@ -80,11 +105,12 @@ class Part:
             if n is None:               # 面積ゼロの退化三角形は捨てる
                 continue                # （法線が長さ 0 になり glTF 的に不正）
             base = len(pos) // 3
-            for v in (va, vb, vc):
-                pos.extend(v)
+            for k in (a, b, c):
+                pos.extend(self.verts[k])
                 nrm.extend(n)
+                uv.extend(self.uvs[k])
             idx.extend((base, base + 1, base + 2))
-        return pos, nrm, idx
+        return pos, nrm, uv, idx
 
 
 def _normal(a: Vec, b: Vec, c: Vec) -> Vec | None:
@@ -117,15 +143,17 @@ def write_glb(path: str, parts: list[Part], model_name="model") -> None:
                              "byteLength": len(data), "target": target})
         return len(buffer_views) - 1
 
+    images: list[dict] = []
+    textures: list[dict] = []
+
     for part in parts:
-        pos, nrm, idx = part.flat_shaded()
+        pos, nrm, uv, idx = part.flat_shaded()
         if not idx:
             continue
         count = len(pos) // 3
 
         pos_view = push(struct.pack(f"<{len(pos)}f", *pos), 34962)
         nrm_view = push(struct.pack(f"<{len(nrm)}f", *nrm), 34962)
-        idx_view = push(struct.pack(f"<{len(idx)}I", *idx), 34963)
 
         xs, ys, zs = pos[0::3], pos[1::3], pos[2::3]
         accessors.append({"bufferView": pos_view, "componentType": 5126,
@@ -134,25 +162,38 @@ def write_glb(path: str, parts: list[Part], model_name="model") -> None:
                           "max": [max(xs), max(ys), max(zs)]})
         accessors.append({"bufferView": nrm_view, "componentType": 5126,
                           "count": count, "type": "VEC3"})
+        attributes = {"POSITION": len(accessors) - 2, "NORMAL": len(accessors) - 1}
+
+        if part.texture is not None:    # UV はテクスチャを持つパーツにだけ付ける
+            uv_view = push(struct.pack(f"<{len(uv)}f", *uv), 34962)
+            accessors.append({"bufferView": uv_view, "componentType": 5126,
+                              "count": count, "type": "VEC2"})
+            attributes["TEXCOORD_0"] = len(accessors) - 1
+
+        idx_view = push(struct.pack(f"<{len(idx)}I", *idx), 34963)
         accessors.append({"bufferView": idx_view, "componentType": 5125,
                           "count": len(idx), "type": "SCALAR"})
 
-        mat = {
-            "name": part.name,
-            "doubleSided": False,
-            "pbrMetallicRoughness": {
-                "baseColorFactor": [*part.color, part.alpha],
-                "metallicFactor": part.metallic,
-                "roughnessFactor": part.roughness,
-            },
+        pbr = {
+            "baseColorFactor": [*part.color, part.alpha],
+            "metallicFactor": part.metallic,
+            "roughnessFactor": part.roughness,
         }
+        if part.texture is not None:
+            # 画像も GLB のバイナリチャンクに同梱する（外部ファイルを作らない）
+            img_view = push(part.texture, 0)
+            buffer_views[img_view].pop("target")   # 画像のビューに target は付けない
+            images.append({"bufferView": img_view, "mimeType": "image/png"})
+            textures.append({"source": len(images) - 1, "sampler": 0})
+            pbr["baseColorTexture"] = {"index": len(textures) - 1}
+
+        mat = {"name": part.name, "doubleSided": False, "pbrMetallicRoughness": pbr}
         if part.alpha < 1.0:
             mat["alphaMode"] = "BLEND"
         materials.append(mat)
 
-        n = len(accessors)
-        primitives.append({"attributes": {"POSITION": n - 3, "NORMAL": n - 2},
-                           "indices": n - 1, "material": len(materials) - 1})
+        primitives.append({"attributes": attributes, "indices": len(accessors) - 1,
+                           "material": len(materials) - 1})
 
     gltf = {
         "asset": {"version": "2.0", "generator": "lowpoly.py"},
@@ -165,6 +206,12 @@ def write_glb(path: str, parts: list[Part], model_name="model") -> None:
         "bufferViews": buffer_views,
         "buffers": [{"byteLength": len(buffer)}],
     }
+    if textures:
+        gltf["images"] = images
+        gltf["textures"] = textures
+        # 10497 = REPEAT, 9729 = LINEAR, 9987 = LINEAR_MIPMAP_LINEAR
+        gltf["samplers"] = [{"magFilter": 9729, "minFilter": 9987,
+                             "wrapS": 10497, "wrapT": 10497}]
 
     json_chunk = json.dumps(gltf, separators=(",", ":")).encode("utf-8")
     json_chunk += b" " * (-len(json_chunk) % 4)
@@ -184,15 +231,18 @@ def write_glb(path: str, parts: list[Part], model_name="model") -> None:
 # --------------------------------------------------------------------------
 
 def prism(part: Part, sides: int, radius: float, y0: float, y1: float,
-          taper=1.0, twist=0.0, cap_bottom=True, cap_top=True) -> None:
+          taper=1.0, twist=0.0, cap_bottom=True, cap_top=True, phase=0.0) -> None:
     """角柱 / 円錐台。taper は y1 側の半径比（0 なら尖らせて円錐にする）、
-    twist は y1 側リングの回転。
+    twist は y1 側リングの回転、phase は y0 側リングの開始角。
+
+    別の形状を上に積むときは、下側の phase に相手の twist を渡して角度を
+    合わせること。ずれているとリング状の隙間が空く。
 
     面の巻き方向は glTF の規約どおり「外から見て反時計回り」に揃える
     （揃っていないと AE の Advanced 3D で裏面が抜けて中が透けて見える）。
     """
-    ring0 = [part.add_vert((radius * math.cos(2 * math.pi * i / sides), y0,
-                            radius * math.sin(2 * math.pi * i / sides)))
+    ring0 = [part.add_vert((radius * math.cos(2 * math.pi * i / sides + phase), y0,
+                            radius * math.sin(2 * math.pi * i / sides + phase)))
              for i in range(sides)]
     pointed = taper <= 1e-9
     if pointed:
@@ -200,9 +250,10 @@ def prism(part: Part, sides: int, radius: float, y0: float, y1: float,
         ring1 = [apex] * sides
     else:
         r = radius * taper
-        ring1 = [part.add_vert((r * math.cos(2 * math.pi * i / sides + twist), y1,
-                                r * math.sin(2 * math.pi * i / sides + twist)))
-                 for i in range(sides)]
+        ring1 = [part.add_vert(
+            (r * math.cos(2 * math.pi * i / sides + phase + twist), y1,
+             r * math.sin(2 * math.pi * i / sides + phase + twist)))
+            for i in range(sides)]
 
     lo, hi = (ring0, ring1) if y1 > y0 else (ring1, ring0)
     for i in range(sides):
@@ -221,8 +272,35 @@ def _dedup(idx: list[int]) -> list[int]:
     return [v for k, v in enumerate(idx) if v != idx[k - 1]]
 
 
-def cone(part: Part, sides: int, radius: float, y0: float, y1: float, cap=True) -> None:
-    prism(part, sides, radius, y0, y1, taper=0.0, cap_bottom=cap, cap_top=False)
+def cone(part: Part, sides: int, radius: float, y0: float, y1: float, cap=True,
+         phase=0.0) -> None:
+    prism(part, sides, radius, y0, y1, taper=0.0, cap_bottom=cap, cap_top=False,
+          phase=phase)
+
+
+def loft(part: Part, sections: list[tuple[float, float, float]], sides: int = 8,
+         cap_bottom=True, cap_top=True, twist=0.0) -> None:
+    """楕円断面を下から積み上げたチューブ。胴・腕・脚・髪の房などに使う。
+
+    sections は [(y, x半径, z半径), ...] を y の小さい順で。半径 0 の断面を
+    端に置けば尖らせられる（重なった頂点は退化三角形として捨てられる）。
+    """
+    rings: list[list[int]] = []
+    for level, (y, rx, rz) in enumerate(sections):
+        phase = twist * level
+        rings.append([part.add_vert((rx * math.cos(2 * math.pi * i / sides + phase), y,
+                                     rz * math.sin(2 * math.pi * i / sides + phase)))
+                      for i in range(sides)])
+
+    for lo, hi in zip(rings, rings[1:]):
+        for i in range(sides):
+            j = (i + 1) % sides
+            part.add_face(_dedup([lo[i], hi[i], hi[j], lo[j]]))
+
+    if cap_bottom:
+        part.add_face(list(rings[0]))                 # 下面は -Y 向き
+    if cap_top:
+        part.add_face(list(reversed(rings[-1])))      # 上面は +Y 向き
 
 
 def ring(part: Part, sides: int, r_inner: float, r_outer: float,
@@ -286,6 +364,62 @@ def icosphere(part: Part, subdiv: int, radius: float, center=(0.0, 0.0, 0.0),
         part.add_tri(idx[a], idx[b], idx[c])
 
 
+def box(part: Part, x0: float, y0: float, z0: float,
+        x1: float, y1: float, z1: float) -> None:
+    """軸に沿った直方体。靴・手・小物向け。"""
+    def v(x, y, z):
+        return part.add_vert((x, y, z))
+
+    part.add_face([v(x1, y0, z1), v(x1, y0, z0), v(x1, y1, z0), v(x1, y1, z1)])  # +X
+    part.add_face([v(x0, y0, z0), v(x0, y0, z1), v(x0, y1, z1), v(x0, y1, z0)])  # -X
+    part.add_face([v(x0, y1, z1), v(x1, y1, z1), v(x1, y1, z0), v(x0, y1, z0)])  # +Y
+    part.add_face([v(x0, y0, z0), v(x1, y0, z0), v(x1, y0, z1), v(x0, y0, z1)])  # -Y
+    part.add_face([v(x0, y0, z1), v(x1, y0, z1), v(x1, y1, z1), v(x0, y1, z1)])  # +Z
+    part.add_face([v(x1, y0, z0), v(x0, y0, z0), v(x0, y1, z0), v(x1, y1, z0)])  # -Z
+
+
+def face_plate(part: Part, center: Vec, radii: Vec, yaw_span: float,
+               pitch_hi: float, pitch_lo: float, cols: int = 5, rows: int = 5,
+               bulge: float = 1.015) -> None:
+    """楕円体（頭）の前面に沿う格子状の板。UV は 0..1 に張る。
+
+    顔をテクスチャで描くための土台。頭の表面よりわずかに外に出して
+    Z ファイティングを避ける。glTF の UV は左上原点なので v は下向き。
+    """
+    grid: list[list[int]] = []
+    for r in range(rows + 1):
+        fv = r / rows
+        pitch = pitch_hi + (pitch_lo - pitch_hi) * fv
+        row = []
+        for c in range(cols + 1):
+            fu = c / cols
+            yaw = (fu * 2 - 1) * yaw_span
+            d = (math.sin(yaw) * math.cos(pitch), math.sin(pitch),
+                 math.cos(yaw) * math.cos(pitch))
+            row.append(part.add_vert(
+                (center[0] + d[0] * radii[0] * bulge,
+                 center[1] + d[1] * radii[1] * bulge,
+                 center[2] + d[2] * radii[2] * bulge), (fu, fv)))
+        grid.append(row)
+
+    for r in range(rows):
+        for c in range(cols):
+            part.add_face([grid[r][c], grid[r + 1][c],
+                           grid[r + 1][c + 1], grid[r][c + 1]])
+
+
+def filter_tris(part: Part, keep) -> None:
+    """三角形の重心を見て残すものを選ぶ。髪から顔の窓を抜くのに使う。"""
+    kept = []
+    for a, b, c in part.tris:
+        va, vb, vc = part.verts[a], part.verts[b], part.verts[c]
+        centroid = ((va[0] + vb[0] + vc[0]) / 3, (va[1] + vb[1] + vc[1]) / 3,
+                    (va[2] + vb[2] + vc[2]) / 3)
+        if keep(centroid):
+            kept.append((a, b, c))
+    part.tris = kept
+
+
 def _norm3(p: Vec) -> Vec:
     ln = math.sqrt(p[0] ** 2 + p[1] ** 2 + p[2] ** 2) or 1.0
     return (p[0] / ln, p[1] / ln, p[2] / ln)
@@ -326,8 +460,10 @@ def make_crystal() -> list[Part]:
     def shard(target: Part, r: float, h: float, tip: float,
               offset: Vec, yaw: float, tilt: float) -> None:
         p = Part(target.color, name="tmp")
-        prism(p, 6, r, 0.0, h, taper=0.82, twist=0.12, cap_top=False)
-        cone(p, 6, r * 0.82, h, h + tip, cap=False)   # 上の尖り
+        # 上下とも錐で塞ぐので、柱の側にフタを付けると内部に面が残る
+        prism(p, 6, r, 0.0, h, taper=0.82, twist=0.12,
+              cap_bottom=False, cap_top=False)
+        cone(p, 6, r * 0.82, h, h + tip, cap=False, phase=0.12)   # 上の尖り
         cone(p, 6, r, 0.0, -r * 0.5, cap=False)       # 下の尖り
         target.merge(p.transform(offset=offset, rot_y=yaw, tilt=tilt))
 
