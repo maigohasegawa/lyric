@@ -2,99 +2,2165 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>tools — lyric</title>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ゆめテープ / YUMETAPE — VHS・ホラー・ドリームコアのカメラ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0b0b10">
+<meta name="description" content="いつもの景色を、VHS・ホラー・ドリームコアの映像に変えて撮るカメラ。エフェクトが焼き込まれた状態で写真も動画も保存できます。iPhoneのSafariで開いてホーム画面に追加すると、アプリとして起動します。">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ゆめテープ">
+<meta property="og:title" content="ゆめテープ / YUMETAPE">
+<meta property="og:description" content="いつもの景色を、VHS・ホラー・ドリームコアの映像に変えて撮るカメラ。撮った時点でその見た目になります。">
+<meta property="og:url" content="https://maigohasegawa.github.io/yumetape/">
+<meta property="og:image" content="https://maigohasegawa.github.io/yumetape/ogp.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="ゆめテープ / YUMETAPE">
+<meta name="twitter:description" content="いつもの景色を、VHS・ホラー・ドリームコアの映像に変えて撮るカメラ。撮った時点でその見た目になります。">
+<meta name="twitter:image" content="https://maigohasegawa.github.io/yumetape/ogp.png">
+
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ゆめテープ">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" href="./icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0b0b10; --panel:#16171f; --line:#2c2e3a;
-    --text:#eeeef2; --muted:#8d8fa0; --a:#12c2d6; --b:#ef3f96; --c:#f2b705;
+    --bg:#0b0b10;
+    --panel:#16171f;
+    --panel-2:#1e1f2a;
+    --line:#2c2e3a;
+    --text:#eeeef2;
+    --muted:#8d8fa0;
+    --a:#12c2d6;
+    --b:#ef3f96;
+    --c:#f2b705;
+    --rec:#ff3b30;
+    --safe-b:env(safe-area-inset-bottom, 0px);
+    --safe-t:env(safe-area-inset-top, 0px);
   }
-  *{box-sizing:border-box;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
   body{
-    margin:0;min-height:100vh;
-    background:
-      radial-gradient(circle at 15% 0%, #1c1e2c 0%, transparent 55%),
-      radial-gradient(circle at 85% 12%, #2a1526 0%, transparent 48%),
-      var(--bg);
+    margin:0;
+    background:var(--bg);
     color:var(--text);
     font-family:'Zen Kaku Gothic New',sans-serif;
-    padding:calc(env(safe-area-inset-top) + 56px) 22px 64px;
+    overflow:hidden;
+    overscroll-behavior:none;
   }
-  main{max-width:640px;margin:0 auto;}
-  .eyebrow{
-    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.18em;
-    color:var(--muted);text-transform:uppercase;margin-bottom:12px;
-  }
-  h1{font-size:clamp(24px,6vw,32px);margin:0 0 10px;letter-spacing:.02em;}
-  .lede{color:var(--muted);font-size:13.5px;line-height:1.95;margin:0 0 34px;}
-  .card{
-    display:flex;gap:16px;align-items:flex-start;
-    background:var(--panel);border:1px solid var(--line);
-    border-radius:16px;padding:18px;margin-bottom:14px;
-    text-decoration:none;color:inherit;
-  }
-  .card:hover{border-color:var(--muted);}
-  .card img{width:56px;height:56px;border-radius:13px;flex:0 0 auto;}
-  .card .mark{
-    width:56px;height:56px;border-radius:13px;flex:0 0 auto;
+  .mono{font-family:'JetBrains Mono',monospace;}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+  button:active{transform:scale(.96);}
+  button{transition:transform .1s ease, opacity .12s ease, background .12s ease, border-color .12s ease;}
+
+  /* ---------- STAGE ---------- */
+  #stage{
+    position:fixed;inset:0;
     display:flex;align-items:center;justify-content:center;
-    background:#20212b;
+    background:#000;
   }
-  .card h2{margin:0 0 6px;font-size:15.5px;font-weight:900;}
-  .card p{margin:0;color:var(--muted);font-size:12.5px;line-height:1.85;}
-  .tag{
-    display:inline-block;margin-top:9px;
-    font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;
-    color:var(--a);border:1px solid rgba(18,194,214,.4);
-    border-radius:12px;padding:2px 9px;
+  #out{
+    max-width:100%;max-height:100%;
+    width:auto;height:auto;
+    display:block;
+    background:#000;
   }
-  footer{
-    max-width:640px;margin:32px auto 0;
-    color:var(--muted);font-size:11.5px;line-height:1.95;
-    overflow-wrap:anywhere;
-  }
-  footer code{
+  #gl{display:none;}
+  #cam{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;}
+
+  /* ---------- TOP BAR ---------- */
+  #topbar{
+    position:fixed;top:calc(var(--safe-t) + 10px);left:0;right:0;
+    display:flex;align-items:center;gap:10px;
+    padding:0 14px;
     font-family:'JetBrains Mono',monospace;font-size:11px;
-    background:#20212b;border-radius:4px;padding:1px 5px;
+    letter-spacing:.12em;
+    pointer-events:none;
+    overflow:hidden;
+    z-index:10;
   }
+  .badge{
+    background:rgba(10,10,16,.62);
+    border:1px solid rgba(255,255,255,.14);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+    border-radius:20px;padding:5px 11px;
+    display:flex;align-items:center;gap:7px;
+    white-space:nowrap;flex:0 0 auto;
+  }
+  .badge.hide{display:none;}
+  #recBadge{color:#fff;border-color:rgba(255,59,48,.55);background:rgba(60,10,10,.6);display:none;}
+  #recBadge.on{display:flex;}
+  #recBadge.paused{border-color:rgba(242,183,5,.55);background:rgba(58,44,8,.62);}
+  #recBadge.paused .recdot{background:var(--c);}
+  .recdot{width:8px;height:8px;border-radius:50%;background:var(--rec);animation:blink 1s steps(1,end) infinite;}
+  @keyframes blink{50%{opacity:.15;}}
+  #fps{margin-left:auto;color:var(--muted);}
+
+  /* ---------- DOCK ---------- */
+  #dock{
+    position:fixed;left:0;right:0;bottom:0;
+    padding:12px 0 calc(var(--safe-b) + 12px);
+    background:linear-gradient(to top, rgba(8,8,12,.92) 55%, rgba(8,8,12,0));
+    z-index:12;
+  }
+  #presets{
+    display:flex;gap:8px;
+    overflow-x:auto;
+    padding:0 14px 12px;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none;
+  }
+  #presets::-webkit-scrollbar{display:none;}
+  .preset{
+    flex:0 0 auto;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;font-weight:600;letter-spacing:.08em;
+    padding:8px 14px;border-radius:20px;
+    border:1px solid var(--line);
+    background:rgba(30,31,42,.7);
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .preset.active{background:var(--text);color:#111;border-color:var(--text);}
+  .preset-group{
+    flex:0 0 auto;align-self:center;
+    font-family:'JetBrains Mono',monospace;font-size:9.5px;letter-spacing:.16em;
+    color:#5c5e6d;padding:0 4px 0 8px;
+    border-left:1px solid var(--line);
+    margin-left:2px;
+  }
+  .preset-group:first-child{border-left:none;margin-left:0;padding-left:0;}
+
+  #buttons{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:0 18px;
+  }
+  .side-btn{
+    width:50px;height:50px;border-radius:50%;
+    border:1px solid var(--line);
+    background:rgba(30,31,42,.75);
+    display:flex;align-items:center;justify-content:center;
+    font-size:19px;flex:0 0 auto;
+  }
+  .side-btn.small{font-size:17px;}
+  #shutter{
+    flex:0 0 auto;
+    width:74px;height:74px;border-radius:50%;
+    border:3px solid rgba(255,255,255,.85);
+    background:transparent;
+    display:flex;align-items:center;justify-content:center;
+  }
+  #shutterCore{
+    width:58px;height:58px;border-radius:50%;
+    background:#fff;
+    transition:border-radius .18s ease, width .18s ease, height .18s ease, background .18s ease;
+  }
+  #shutter.recording #shutterCore{
+    width:28px;height:28px;border-radius:7px;background:var(--rec);
+  }
+  #shutter.photo #shutterCore{background:#fff;}
+  #pauseBtn{display:none;color:var(--rec);border-color:rgba(255,59,48,.5);font-size:15px;}
+  #pauseBtn.on{display:flex;}
+  #pauseBtn.paused{color:#fff;border-color:rgba(255,255,255,.5);}
+  #settingsBtn.hide{display:none;}
+  #cutBadge,#speedBadge{display:none;}
+  #cutBadge.on,#speedBadge.on{display:flex;}
+  #speedBadge{color:var(--c);border-color:rgba(242,183,5,.45);}
+  #glitchBtn{
+    font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:0;
+    color:var(--b);border-color:rgba(239,63,150,.5);
+  }
+  #glitchBtn.hold{background:var(--b);color:#fff;border-color:var(--b);}
+
+  #modeRow{
+    display:flex;justify-content:center;gap:6px;
+    padding:0 0 12px;
+  }
+  .mode{
+    font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.14em;
+    color:var(--muted);padding:5px 12px;border-radius:14px;
+  }
+  .mode.active{color:var(--text);background:rgba(255,255,255,.1);}
+
+  /* ---------- SHEET ---------- */
+  .sheet{
+    position:fixed;left:0;right:0;bottom:0;
+    max-height:82vh;
+    background:var(--panel);
+    border-top:1px solid var(--line);
+    border-radius:18px 18px 0 0;
+    transform:translateY(110%);
+    transition:transform .28s cubic-bezier(.22,1,.36,1);
+    z-index:20;
+    display:flex;flex-direction:column;
+  }
+  .sheet.open{transform:translateY(0);}
+  .sheet-head{
+    display:flex;align-items:center;gap:12px;
+    padding:14px 18px;border-bottom:1px solid var(--line);
+  }
+  .sheet-head h2{margin:0;font-size:14px;font-weight:700;}
+  .sheet-head .close{margin-left:auto;color:var(--muted);font-size:13px;padding:6px 10px;}
+  .sheet-body{
+    overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:14px 18px calc(var(--safe-b) + 24px);
+  }
+  .grip{width:38px;height:4px;border-radius:2px;background:var(--line);margin:8px auto 0;}
+
+  .field{margin-bottom:14px;}
+  .field label{
+    display:flex;align-items:baseline;gap:8px;
+    font-size:12.5px;margin-bottom:6px;color:var(--text);
+  }
+  .field label .val{
+    margin-left:auto;font-family:'JetBrains Mono',monospace;
+    font-size:11px;color:var(--muted);
+  }
+  input[type=range]{
+    -webkit-appearance:none;appearance:none;
+    width:100%;height:3px;border-radius:2px;
+    background:var(--line);outline:none;
+  }
+  input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;appearance:none;
+    width:22px;height:22px;border-radius:50%;
+    background:var(--text);border:none;
+  }
+  select{
+    width:100%;background:var(--panel-2);color:var(--text);
+    border:1px solid var(--line);border-radius:9px;
+    padding:10px 12px;font-size:13px;font-family:inherit;
+  }
+  .toggle-row{
+    display:flex;align-items:center;gap:10px;
+    padding:11px 0;border-bottom:1px solid var(--line);
+    font-size:13px;
+  }
+  .toggle-row:last-child{border-bottom:none;}
+  .switch{
+    margin-left:auto;width:48px;height:28px;border-radius:16px;
+    background:var(--line);position:relative;flex:0 0 auto;
+  }
+  .switch::after{
+    content:'';position:absolute;top:3px;left:3px;
+    width:22px;height:22px;border-radius:50%;background:#fff;
+    transition:transform .18s ease;
+  }
+  .switch.on{background:var(--a);}
+  .switch.on::after{transform:translateX(20px);}
+  .sub-note{color:var(--muted);font-size:11.5px;line-height:1.8;margin:2px 0 16px;}
+  .group-title{
+    font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:.16em;
+    color:var(--muted);margin:20px 0 10px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .group-title::after{content:'';flex:1;height:1px;background:var(--line);}
+
+  /* ---------- START / ERROR ---------- */
+  #start{
+    position:fixed;inset:0;z-index:40;
+    background:
+      radial-gradient(circle at 20% 0%, #1c1e2c 0%, transparent 55%),
+      radial-gradient(circle at 85% 15%, #2a1526 0%, transparent 48%),
+      var(--bg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:32px 26px calc(var(--safe-b) + 32px);
+    text-align:center;gap:6px;
+  }
+  #start h1{
+    font-size:clamp(34px,10vw,52px);font-weight:900;letter-spacing:.08em;
+    margin:0 0 2px;
+  }
+  #start h1 .g1{color:var(--a);}
+  #start h1 .g2{color:var(--b);}
+  #start .latin{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;letter-spacing:.42em;color:var(--muted);
+    margin:0 0 20px;padding-left:.42em;
+  }
+  #start p{color:var(--muted);font-size:13px;line-height:1.95;max-width:420px;margin:0 0 22px;}
+  #startBtn{
+    background:var(--text);color:#111;
+    font-size:15px;font-weight:900;
+    padding:16px 42px;border-radius:32px;
+  }
+  #startNote{
+    margin-top:22px;color:var(--muted);font-size:11.5px;line-height:1.9;max-width:430px;
+    font-family:'JetBrains Mono',monospace;text-align:left;
+  }
+  .warn{
+    margin-top:18px;padding:12px 14px;border-radius:10px;
+    border:1px solid rgba(242,183,5,.4);background:rgba(242,183,5,.08);
+    color:var(--c);font-size:12px;line-height:1.8;max-width:430px;text-align:left;
+    display:none;
+  }
+  .warn.show{display:block;}
+  .install{
+    margin-top:20px;padding:13px 16px;border-radius:12px;
+    border:1px solid rgba(18,194,214,.35);background:rgba(18,194,214,.07);
+    color:var(--text);font-size:12.5px;line-height:1.9;max-width:430px;text-align:left;
+    display:none;
+  }
+  .install.show{display:block;}
+  .install b{color:var(--a);}
+  .install .share-ico{
+    display:inline-block;border:1px solid var(--a);border-radius:5px;
+    padding:0 5px;color:var(--a);font-size:11px;line-height:17px;
+  }
+  .install button{
+    margin-top:10px;background:var(--a);color:#052227;
+    font-size:13px;font-weight:900;padding:11px 20px;border-radius:22px;
+  }
+
+  /* ---------- RESULT ---------- */
+  #result{
+    position:fixed;inset:0;z-index:30;
+    background:rgba(6,6,10,.94);
+    backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    display:none;flex-direction:column;align-items:center;justify-content:center;
+    padding:calc(var(--safe-t) + 20px) 20px calc(var(--safe-b) + 20px);gap:16px;
+  }
+  #result.show{display:flex;}
+  #resultMedia{max-width:100%;max-height:62vh;border-radius:12px;background:#000;}
+  #resultBtns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+  #resultBtns button{
+    font-size:13px;font-weight:700;padding:12px 20px;border-radius:24px;
+    border:1px solid var(--line);background:var(--panel-2);
+  }
+  #resultBtns .primary{background:var(--text);color:#111;border-color:var(--text);}
+  #resultInfo{color:var(--muted);font-size:11.5px;font-family:'JetBrains Mono',monospace;}
+
+  .toast{
+    position:fixed;bottom:calc(var(--safe-b) + 150px);left:50%;
+    transform:translateX(-50%) translateY(14px);
+    background:var(--text);color:#111;padding:9px 18px;border-radius:24px;
+    font-size:12.5px;font-weight:700;opacity:0;pointer-events:none;
+    transition:opacity .2s ease, transform .2s ease;z-index:50;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  /* ---------- MODAL ---------- */
+  .modal{
+    position:fixed;inset:0;z-index:60;
+    background:rgba(6,6,10,.8);
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    display:none;align-items:center;justify-content:center;padding:24px;
+  }
+  .modal.show{display:flex;}
+  .modal-box{
+    width:100%;max-width:340px;
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;
+    padding:20px;
+  }
+  .modal-box h3{margin:0 0 14px;font-size:15px;font-weight:900;}
+  .modal-note{margin:0 0 14px;color:var(--muted);font-size:12px;line-height:1.8;}
+  .modal-box input[type=text]{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:10px;color:var(--text);padding:12px 14px;
+    font-size:16px;font-family:inherit;
+  }
+  .modal-box input[type=text]:focus{outline:2px solid var(--a);outline-offset:1px;}
+  .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;}
+  .modal-btns button{
+    font-size:13px;font-weight:700;padding:11px 18px;border-radius:22px;
+    border:1px solid var(--line);background:var(--panel-2);color:var(--text);
+  }
+  .modal-btns .primary{background:var(--text);color:#111;border-color:var(--text);}
+  .bar{height:6px;border-radius:3px;background:var(--panel-2);overflow:hidden;}
+  .bar-in{height:100%;width:0%;background:var(--a);transition:width .2s linear;}
+
+  /* ---------- MY PRESET ---------- */
+  .row-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+  .mini-btn{
+    font-size:12.5px;font-weight:700;padding:10px 16px;border-radius:20px;
+    border:1px solid var(--line);background:var(--panel-2);color:var(--text);
+  }
+  .my-row{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 0;border-bottom:1px solid var(--line);font-size:13px;
+  }
+  .my-row:last-child{border-bottom:none;}
+  .my-row .del{
+    margin-left:auto;color:var(--muted);font-size:16px;padding:4px 10px;
+  }
+  .my-empty{color:var(--muted);font-size:12px;line-height:1.8;padding:2px 0 6px;}
+
+  .flash{
+    position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:35;
+  }
+  .flash.fire{animation:flash .28s ease-out;}
+  @keyframes flash{0%{opacity:.85;}100%{opacity:0;}}
 </style>
 </head>
 <body>
-<main>
-  <div class="eyebrow">tools</div>
-  <h1>制作補助ツール</h1>
-  <p class="lede">ブラウザだけで動く、ビルド不要のツール置き場です。どちらもデータはすべて端末内で処理され、どこにも送信されません。</p>
 
-  <a class="card" href="./vhs-glitch-cam.html">
-    <img src="./icons/icon-192.png" alt="">
-    <div>
-      <h2>VHS / GLITCH CAM</h2>
-      <p>カメラ映像にVHS風の色にじみ・走査線・トラッキングノイズと、デジタルグリッチをリアルタイムで乗せて撮影します。エフェクトが焼き込まれた状態で写真・動画を保存できます。</p>
-      <span class="tag">ホーム画面に追加でアプリ化</span>
-    </div>
-  </a>
+<div id="stage">
+  <video id="cam" playsinline webkit-playsinline muted autoplay></video>
+  <canvas id="gl"></canvas>
+  <canvas id="out"></canvas>
+</div>
 
-  <a class="card" href="./lyric-layer-tool_1.html">
-    <div class="mark">
-      <svg width="40" height="40" viewBox="0 0 86 86" aria-hidden="true">
-        <circle cx="34" cy="30" r="24" fill="#12c2d6" opacity="0.75"/>
-        <circle cx="54" cy="30" r="24" fill="#ef3f96" opacity="0.75" style="mix-blend-mode:screen"/>
-        <circle cx="44" cy="50" r="24" fill="#f2b705" opacity="0.75" style="mix-blend-mode:screen"/>
-      </svg>
-    </div>
-    <div>
-      <h2>LAYER SONG</h2>
-      <p>1曲の歌詞を3つのトラックに分解します。それぞれ単独でも成立し、3曲を重ねて歌うと元の1曲が浮かび上がる——そんなギミック曲づくりを補助します。</p>
-    </div>
-  </a>
-</main>
+<div id="topbar">
+  <div class="badge" id="recBadge"><span class="recdot"></span><span id="recTime">0:00</span></div>
+  <div class="badge" id="cutBadge">CUT 1</div>
+  <div class="badge" id="presetBadge">VHS 1984</div>
+  <div class="badge" id="speedBadge">0.5x</div>
+  <div class="badge" id="fps">-- FPS</div>
+</div>
 
-<footer>
-  VHS / GLITCH CAM をアプリとして使うには、<code>vhs-glitch-cam.html</code> を開いた状態でSafariの共有ボタンから「ホーム画面に追加」してください。カメラの利用には <code>https://</code> でのアクセスが必要です。
-</footer>
+<div id="dock">
+  <div id="presets"></div>
+  <div id="modeRow">
+    <button class="mode active" data-mode="video">VIDEO</button>
+    <button class="mode" data-mode="photo">PHOTO</button>
+  </div>
+  <div id="buttons">
+    <button class="side-btn small" id="settingsBtn" aria-label="設定">⚙</button>
+    <button class="side-btn small" id="pauseBtn" aria-label="録画を一時停止">‖</button>
+    <button class="side-btn small" id="galleryBtn" aria-label="直前の撮影">⤓</button>
+    <button id="shutter" aria-label="撮影"><span id="shutterCore"></span></button>
+    <button class="side-btn" id="glitchBtn" aria-label="グリッチ">GLITCH</button>
+    <button class="side-btn small" id="flipBtn" aria-label="カメラ切替">⇄</button>
+  </div>
+</div>
+
+<!-- ---------- SETTINGS SHEET ---------- -->
+<div class="sheet" id="sheet">
+  <div class="grip"></div>
+  <div class="sheet-head">
+    <h2>エフェクト設定</h2>
+    <button class="close" id="sheetClose">閉じる</button>
+  </div>
+  <div class="sheet-body">
+    <div class="group-title">RECORDING</div>
+    <div class="field">
+      <label>録画速度<span class="val" id="speedVal"></span></label>
+      <select id="speedSelect">
+        <option value="0.25">0.25x 超スロー</option>
+        <option value="0.5">0.5x スロー</option>
+        <option value="1" selected>1x 標準</option>
+        <option value="2">2x 早回し</option>
+        <option value="4">4x 早回し（タイムラプス）</option>
+      </select>
+    </div>
+    <p class="sub-note" style="margin-top:-6px">
+      標準以外を選ぶと、録画を止めたあとに変換が入ります（スローは録画時間より長くかかります）。
+      速度を変えた映像は<b>音声なし</b>になります。
+    </p>
+
+    <div class="group-title">MY PRESET</div>
+    <div class="row-btns">
+      <button class="mini-btn" id="savePresetBtn">いまの設定に名前をつけて保存</button>
+    </div>
+    <div id="myList"></div>
+
+    <div class="group-title">CAMERA</div>
+    <div class="field">
+      <label>カメラ<span class="val" id="camVal"></span></label>
+      <select id="camSelect"></select>
+    </div>
+    <div class="field">
+      <label>解像度<span class="val" id="resVal"></span></label>
+      <select id="resSelect">
+        <option value="480">低画質 854×480（軽い）</option>
+        <option value="720" selected>標準 1280×720</option>
+        <option value="1080">高画質 1920×1080</option>
+      </select>
+    </div>
+    <div class="toggle-row">左右反転（ミラー）<div class="switch" id="swMirror"></div></div>
+    <div class="toggle-row">録画に音声を含める<div class="switch on" id="swAudio"></div></div>
+    <div class="toggle-row">カムコーダー表示（日付・REC）<div class="switch on" id="swOsd"></div></div>
+    <div class="toggle-row">自動グリッチ（不定期に暴れる）<div class="switch" id="swAuto"></div></div>
+
+    <div class="group-title">VHS</div>
+    <div id="vhsFields"></div>
+
+    <div class="group-title">GLITCH</div>
+    <div id="glitchFields"></div>
+
+    <div class="group-title">DREAM</div>
+    <div class="field">
+      <label>対称</label>
+      <select id="symSelect"></select>
+    </div>
+    <div id="dreamFields"></div>
+
+    <div class="group-title">COLOR</div>
+    <div class="field">
+      <label>色味</label>
+      <select id="tintSelect"></select>
+    </div>
+    <div id="colorFields"></div>
+
+    <p class="sub-note">
+      スライダーの値はプリセットを選ぶと上書きされます。気に入った設定はプリセットを切り替える前にそのまま撮影してください。<br>
+      重い・カクつく場合は解像度を下げるか「色にじみ」「残像」を下げると軽くなります。
+    </p>
+  </div>
+</div>
+
+<!-- ---------- START ---------- -->
+<div id="start">
+  <h1>ゆめ<span class="g1">テ</span>ー<span class="g2">プ</span></h1>
+  <div class="latin">Y U M E T A P E</div>
+  <p>いつもの景色を、VHS・ホラー・ドリームコアの映像に変えて撮るカメラです。撮った時点でその見た目になっているので、あとから加工する必要はありません。写真も動画も撮れます。</p>
+  <button id="startBtn">カメラを起動する</button>
+  <div class="warn" id="startWarn"></div>
+  <div class="install" id="installHint"></div>
+  <div id="startNote">
+    ・初回は「カメラへのアクセス」を許可してください<br>
+    ・Safari推奨（iOS 17以降で動画はMP4保存）<br>
+    ・保存した動画は共有ボタンから「ビデオを保存」で写真アプリへ<br>
+    ・GLITCHボタンは押している間だけ暴れます／画面タップでも一瞬グリッチ
+  </div>
+</div>
+
+<!-- ---------- RESULT ---------- -->
+<div id="result">
+  <div id="resultHolder"></div>
+  <div id="resultInfo"></div>
+  <div id="resultBtns">
+    <button class="primary" id="shareBtn">共有 / 写真に保存</button>
+    <button id="dlBtn">ダウンロード</button>
+    <button id="resultClose">閉じる</button>
+  </div>
+</div>
+
+<!-- ---------- 名前をつけて保存 ---------- -->
+<div class="modal" id="nameModal">
+  <div class="modal-box">
+    <h3>この設定に名前をつける</h3>
+    <input type="text" id="nameInput" maxlength="18" placeholder="例：夕方の散歩" autocomplete="off">
+    <div class="modal-btns">
+      <button id="nameCancel">やめる</button>
+      <button class="primary" id="nameOk">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ---------- 速度変換中 ---------- -->
+<div class="modal" id="convertModal">
+  <div class="modal-box">
+    <h3 id="convertTitle">変換中…</h3>
+    <p class="modal-note" id="convertNote">録画した映像の速度を変えています。この画面のままお待ちください。</p>
+    <div class="bar"><div class="bar-in" id="convertBar"></div></div>
+    <div class="modal-btns">
+      <button id="convertCancel">やめて元の速度で保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="flash" id="flash"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* =========================================================
+   ゆめテープ / YUMETAPE
+   - getUserMedia → WebGL シェーダ → 2Dキャンバス（OSD合成）
+   - captureStream + MediaRecorder で録画、toBlob で静止画
+   ========================================================= */
+
+const video    = document.getElementById('cam');
+const glCanvas = document.getElementById('gl');
+const outCanvas= document.getElementById('out');
+const octx     = outCanvas.getContext('2d', {alpha:false});
+
+/* ---------------- パラメータ定義 ---------------- */
+const PARAM_DEFS = {
+  vhs: [
+    {key:'bleed',    label:'色にじみ（クロマブリード）', min:0, max:3,   step:.01, def:1.2},
+    {key:'rgb',      label:'色ズレ（RGBシフト）',        min:0, max:1,   step:.01, def:.15},
+    {key:'noise',    label:'ノイズ（テープざらつき）',   min:0, max:1,   step:.01, def:.22},
+    {key:'scan',     label:'走査線',                     min:0, max:1,   step:.01, def:.35},
+    {key:'wobble',   label:'テープ揺れ（ワウ）',         min:0, max:1,   step:.01, def:.25},
+    {key:'track',    label:'トラッキング乱れ（下部）',   min:0, max:1,   step:.01, def:.4},
+    {key:'ghost',    label:'残像・尾引き',               min:0, max:1,   step:.01, def:.3},
+    {key:'drop',     label:'テープの傷（細い白線）',     min:0, max:1,   step:.01, def:.3},
+    {key:'interlace',label:'インターレース',             min:0, max:1,   step:.01, def:.3},
+    {key:'stutter',  label:'コマ落ち',                   min:0, max:1,   step:.01, def:0},
+    {key:'roll',     label:'縦の同期ズレ（画面が流れる）',min:0,max:1,   step:.01, def:0},
+    {key:'flicker',  label:'明滅（照明のちらつき）',     min:0, max:1,   step:.01, def:0},
+  ],
+  glitch: [
+    {key:'block',    label:'ブロックグリッチ（モザイク状のズレ）', min:0, max:1, step:.01, def:0},
+    {key:'slice',    label:'スライスずれ',               min:0, max:1,   step:.01, def:0},
+    {key:'wave',     label:'波打ち歪み',                 min:0, max:1,   step:.01, def:0},
+    {key:'invert',   label:'色反転ノイズ',               min:0, max:1,   step:.01, def:0},
+    {key:'autoRate', label:'自動グリッチの頻度',         min:0, max:1,   step:.01, def:.2},
+  ],
+  dream: [
+    {key:'bloom',    label:'ブルーム（光のにじみ）',     min:0, max:1,   step:.01, def:0},
+    {key:'soft',     label:'ソフトフォーカス',           min:0, max:1,   step:.01, def:0},
+    {key:'fade',     label:'褪せ（黒が浮く・白っぽく）', min:0, max:1,   step:.01, def:0},
+    {key:'leak',     label:'光漏れ',                     min:0, max:1,   step:.01, def:0},
+    {key:'spark',    label:'きらめき（星）',             min:0, max:1,   step:.01, def:0},
+    {key:'aberr',    label:'レンズの色ズレ（周辺）',     min:0, max:1,   step:.01, def:0},
+    {key:'fish',     label:'レンズのふくらみ',           min:-.6,max:1,  step:.01, def:0},
+    {key:'breathe',  label:'うねり（ゆっくり歪む）',     min:0, max:1,   step:.01, def:0},
+    {key:'lofi',     label:'低画質デジカメ（粗いドット）',min:0, max:1,  step:.01, def:0},
+  ],
+  color: [
+    {key:'sat',      label:'彩度',                       min:0, max:2,   step:.01, def:.92},
+    {key:'contrast', label:'コントラスト',               min:.5,max:2,   step:.01, def:1.1},
+    {key:'bright',   label:'明るさ',                     min:-.5,max:.5, step:.01, def:0},
+    {key:'vig',      label:'周辺減光',                   min:0, max:1,   step:.01, def:.35},
+    {key:'tint',     label:'色味の強さ',                 min:0, max:1,   step:.01, def:0},
+  ]
+};
+
+// 色味（下の「色味」セレクトで選ぶ。強さは上の tint スライダー）
+const TINTS = [
+  {name:'なし',            col:[1.00, 1.00, 1.00]},
+  {name:'緑（暗視カメラ）', col:[0.40, 1.30, 0.50]},
+  {name:'青（夜・寒色）',   col:[0.60, 0.85, 1.40]},
+  {name:'セピア（古い8mm）',col:[1.35, 1.02, 0.68]},
+  {name:'赤（非常灯）',     col:[1.45, 0.55, 0.55]},
+  {name:'ピンク（ゆめ）',   col:[1.35, 0.86, 1.12]},
+  {name:'紫（ゆめ）',       col:[1.12, 0.78, 1.40]},
+];
+
+// 対称。ドリーム／ウィアードコア向け
+const SYMS = ['なし', '左右対称', '上下対称', '4分割'];
+const ALL_PARAMS = [...PARAM_DEFS.vhs, ...PARAM_DEFS.glitch, ...PARAM_DEFS.dream, ...PARAM_DEFS.color];
+
+const P = {};
+ALL_PARAMS.forEach(d => P[d.key] = d.def);
+
+/* ---------------- プリセット ---------------- */
+const BASE = {bleed:0,rgb:0,noise:0,scan:0,wobble:0,track:0,ghost:0,drop:0,interlace:0,stutter:0,
+              roll:0,flicker:0,block:0,slice:0,wave:0,invert:0,autoRate:.2,
+              bloom:0,soft:0,fade:0,leak:0,spark:0,aberr:0,fish:0,breathe:0,lofi:0,
+              sat:1,contrast:1,bright:0,vig:0,tint:0};
+
+// group: プリセット一覧の見出し／tintIdx: TINTS の番号
+const PRESETS = [
+  {group:'VHS', name:'CLEAN', p:{}},
+
+  {group:'VHS', name:'VHS 1984',
+   p:{bleed:1.4,rgb:.18,noise:.2,scan:.38,wobble:.28,track:.4,ghost:.3,drop:.28,
+      interlace:.3,sat:.92,contrast:1.12,bright:.02,vig:.35}},
+
+  {group:'VHS', name:'すり切れテープ',
+   p:{bleed:2.2,rgb:.3,noise:.45,scan:.5,wobble:.55,track:.8,ghost:.45,drop:.6,
+      interlace:.45,stutter:.25,roll:.05,flicker:.12,sat:.7,contrast:1.2,bright:-.03,vig:.55}},
+
+  {group:'VHS', name:'8mm ホームビデオ', tintIdx:3,
+   p:{bleed:.8,rgb:.1,noise:.26,scan:.15,wobble:.12,track:.12,ghost:.15,drop:.14,
+      interlace:.15,sat:1.02,contrast:1.05,bright:.04,vig:.45,tint:.3}},
+
+  {group:'ホラー', name:'心霊ビデオ',
+   p:{bleed:1.5,rgb:.2,noise:.36,scan:.35,wobble:.3,track:.45,ghost:.42,drop:.3,
+      interlace:.35,stutter:.1,flicker:.28,roll:.03,block:.12,slice:.12,autoRate:.12,
+      sat:.55,contrast:1.28,bright:-.09,vig:.68}},
+
+  {group:'ホラー', name:'監視カメラ',
+   p:{bleed:.15,rgb:.04,noise:.4,scan:.55,wobble:.08,track:.25,ghost:.2,drop:.22,
+      interlace:.5,stutter:.45,flicker:.15,autoRate:.08,
+      sat:0,contrast:1.35,bright:-.04,vig:.62}},
+
+  {group:'ホラー', name:'暗視カメラ', tintIdx:1,
+   p:{bleed:.3,rgb:.06,noise:.6,scan:.3,wobble:.1,track:.2,ghost:.3,drop:.2,
+      interlace:.25,flicker:.2,autoRate:.1,
+      sat:0,contrast:1.3,bright:.07,vig:.72,tint:.95}},
+
+  {group:'ホラー', name:'呪いのテープ',
+   p:{bleed:2.4,rgb:.5,noise:.6,scan:.5,wobble:.75,track:1,ghost:.5,drop:.75,
+      interlace:.5,stutter:.3,flicker:.5,roll:.35,block:.45,slice:.55,wave:.3,invert:.3,
+      autoRate:.45,sat:.5,contrast:1.35,bright:-.05,vig:.6}},
+
+  {group:'ドリーム', name:'DREAMCORE', tintIdx:5,
+   p:{bloom:.7,soft:.45,fade:.5,leak:.3,spark:.25,aberr:.35,fish:.22,breathe:.3,lofi:.12,
+      noise:.06,sat:1.25,contrast:.95,bright:.06,vig:.25,tint:.25}},
+
+  {group:'ドリーム', name:'ゆめかわ', tintIdx:5,
+   p:{bloom:.85,soft:.55,fade:.68,leak:.45,spark:.6,aberr:.25,fish:.15,breathe:.35,
+      sat:1.35,contrast:.9,bright:.1,vig:.18,tint:.42}},
+
+  {group:'ドリーム', name:'WEIRDCORE', tintIdx:6, symIdx:1,
+   p:{bloom:.5,soft:.3,fade:.35,leak:.2,spark:.15,aberr:.55,fish:.45,breathe:.5,lofi:.35,
+      block:.12,slice:.1,invert:.12,autoRate:.18,noise:.1,
+      sat:1.4,contrast:1.1,bright:.03,vig:.3,tint:.3}},
+
+  {group:'ドリーム', name:'リミナル', tintIdx:2,
+   p:{bloom:.4,soft:.35,fade:.55,leak:.12,aberr:.2,fish:.18,breathe:.15,lofi:.2,
+      noise:.12,sat:.85,contrast:.95,bright:.05,vig:.35,tint:.3}},
+
+  {group:'ドリーム', name:'2000sデジカメ',
+   p:{bloom:.35,soft:.12,fade:.18,aberr:.3,fish:.1,lofi:.55,noise:.22,
+      sat:1.15,contrast:1.2,bright:.02,vig:.3}},
+
+  {group:'グリッチ', name:'GLITCH',
+   p:{bleed:.8,rgb:.45,noise:.2,scan:.2,wobble:.15,track:.25,ghost:.2,drop:.18,
+      block:.6,slice:.5,wave:.2,invert:.25,autoRate:.35,sat:1.15,contrast:1.15,vig:.3}},
+
+  {group:'グリッチ', name:'DATAMOSH',
+   p:{bleed:1.8,rgb:.35,noise:.12,scan:.1,ghost:.9,block:.45,slice:.25,wave:.35,
+      stutter:.4,autoRate:.3,sat:1.2,contrast:1.05,vig:.25}},
+];
+
+/* ---------------- 状態 ---------------- */
+const S = {
+  mirror:false, audio:true, osd:true, auto:false,
+  mode:'video',
+  tintIdx:0, symIdx:0,
+  speed:1,
+  presetId:'b:1',
+  facing:'environment',
+  deviceId:null,
+  resolution:720,
+  preset:1,
+  running:false,
+  burstUntil:0, hold:false,
+  frame:0,
+};
+
+/* ---------------- WebGL ---------------- */
+const VERT = `
+attribute vec2 aPos;
+varying vec2 vUv;
+void main(){
+  vUv = aPos * 0.5 + 0.5;
+  gl_Position = vec4(aPos, 0.0, 1.0);
+}`;
+
+const FRAG = `
+precision highp float;
+varying vec2 vUv;
+uniform sampler2D uTex;
+uniform sampler2D uPrev;
+uniform vec2  uRes;
+uniform float uTime;
+uniform float uMirror;
+uniform float uBleed, uRgb, uNoise, uScan, uWobble, uTrack, uGhost, uDrop, uInterlace;
+uniform float uBlock, uSlice, uWave, uInvert;
+uniform float uFlicker, uRoll;
+uniform float uBloom, uSoft, uFade, uAberr, uFish, uBreathe, uLofi, uLeak, uSpark, uSym;
+uniform float uSat, uContrast, uBright, uVig, uTint;
+uniform vec3  uTintCol;
+
+float hash11(float p){ return fract(sin(p*127.1)*43758.5453123); }
+float hash21(vec2 p){ return fract(sin(dot(p, vec2(127.1,311.7)))*43758.5453123); }
+float vnoise(vec2 p){
+  vec2 i = floor(p), f = fract(p);
+  f = f*f*(3.0-2.0*f);
+  return mix(mix(hash21(i), hash21(i+vec2(1.0,0.0)), f.x),
+             mix(hash21(i+vec2(0.0,1.0)), hash21(i+vec2(1.0,1.0)), f.x), f.y);
+}
+vec3 rgb2yiq(vec3 c){
+  return vec3(dot(c, vec3(0.299, 0.587, 0.114)),
+              dot(c, vec3(0.5959,-0.2746,-0.3213)),
+              dot(c, vec3(0.2115,-0.5227, 0.3112)));
+}
+vec3 yiq2rgb(vec3 c){
+  return vec3(dot(c, vec3(1.0, 0.956, 0.619)),
+              dot(c, vec3(1.0,-0.272,-0.647)),
+              dot(c, vec3(1.0,-1.106, 1.703)));
+}
+vec3 tex(vec2 p){
+  return texture2D(uTex, clamp(p, vec2(0.0015), vec2(0.9985))).rgb;
+}
+
+/* 円形に散らしたぼかし。asp は縦横比の補正 */
+vec3 ringBlur(vec2 p, float rad, vec2 asp){
+  vec3 s = tex(p);
+  for(int i=0;i<6;i++){
+    float a = float(i) * 1.0472;
+    s += tex(p + vec2(cos(a), sin(a)) * rad * asp);
+  }
+  return s / 7.0;
+}
+
+#define TAPS 8
+
+void main(){
+  float t = uTime;
+  vec2 uv = vUv;
+  uv.x = mix(uv.x, 1.0 - uv.x, uMirror);
+
+  /* 走査線側の座標（画面に固定される現象はこちらを使う）と
+     映像側の座標（テープの中身。ロールで動く）を分けて扱う */
+  float srow = floor(vUv.y * uRes.y);
+  vec2 aspect = vec2(uRes.y / uRes.x, 1.0);
+
+  /* --- 対称（左半分／上半分を折り返す。ドリーム・ウィアードコア向け） --- */
+  if(uSym > 0.5){
+    if(uSym < 1.5)      uv.x = 0.5 - abs(uv.x - 0.5);
+    else if(uSym < 2.5) uv.y = 0.5 - abs(uv.y - 0.5);
+    else { uv.x = 0.5 - abs(uv.x - 0.5); uv.y = 0.5 - abs(uv.y - 0.5); }
+  }
+
+  /* --- レンズのふくらみ（魚眼／糸巻き） --- */
+  if(abs(uFish) > 0.001){
+    vec2 fc = uv - 0.5;
+    uv = 0.5 + fc * (1.0 - uFish * dot(fc, fc) * 1.6);
+  }
+
+  /* --- ゆっくりしたうねり（夢の中の揺らぎ） --- */
+  uv += vec2(sin(uv.y*4.2 + uTime*0.7), cos(uv.x*3.3 + uTime*0.55)) * uBreathe * 0.014;
+
+  /* --- 垂直同期ズレ：画面が下から上へ流れる（ホラー向け） --- */
+  float rollOff = 0.0;
+  if(uRoll > 0.001){
+    rollOff = fract(t * uRoll * 0.20 + vnoise(vec2(t*0.4, 7.0)) * uRoll * 0.5);
+    uv.y = fract(uv.y + rollOff);
+  }
+
+  /* --- テープ揺れ（横方向のライン単位ジッタ + ゆっくりしたうねり） --- */
+  float w  = (vnoise(vec2(srow*0.05, t*2.2)) - 0.5) * 2.0;
+  w += (hash21(vec2(srow, floor(t*24.0))) - 0.5) * 0.45;
+  uv.x += w * uWobble * 0.016;
+  uv.x += sin(vUv.y*3.4 + t*1.1) * uWobble * 0.004;
+
+  /* --- 波打ち歪み（グリッチ） --- */
+  uv.x += sin(vUv.y*38.0 + t*9.0) * uWave * 0.012;
+  uv.y += sin(vUv.x*17.0 + t*5.0) * uWave * 0.004;
+
+  /* --- ヘッドスイッチングノイズ（画面下部の帯） --- */
+  float band = smoothstep(0.055, 0.0, vUv.y);
+  float bshift = (hash21(vec2(srow, floor(t*14.0))) - 0.5);
+  uv.x += band * bshift * uTrack * 0.35;
+
+  /* --- スライスずれ --- */
+  float st = floor(t*9.0);
+  float sIdx = floor(vUv.y * 26.0);
+  float sr = hash21(vec2(sIdx, st));
+  float sOn = step(1.0 - uSlice*0.55, sr);
+  uv.x += sOn * (hash21(vec2(sIdx+7.3, st)) - 0.5) * 0.34 * uSlice;
+
+  /* --- ブロックグリッチ ---
+     細かいモザイク単位でずらす。ずらす量もブロック格子にスナップさせて、
+     切り出した四角がそのまま隣にはまったように見せる。 */
+  float bt = floor(t*11.0);
+  vec2  bs = vec2(48.0, 30.0) * (1.0 + step(0.55, hash11(bt)));   // 時々さらに細かく
+  vec2  bid = floor(vUv * bs);
+  float br  = hash21(bid + bt*13.7);
+  float bOn = step(1.0 - uBlock*0.22, br);
+  vec2  braw = (vec2(hash21(bid+bt+3.1), hash21(bid+bt+9.7)) - 0.5)
+               * vec2(0.09, 0.03) * uBlock * bOn;
+  vec2  boff = floor(braw * bs + 0.5) / bs;                        // ブロック単位にスナップ
+  uv += boff;
+
+  /* --- 低画質デジカメ：座標を粗い格子に丸めてドットを大きくする --- */
+  if(uLofi > 0.001){
+    vec2 grid = mix(uRes, vec2(150.0, 84.0), uLofi*uLofi);
+    uv = (floor(uv * grid) + 0.5) / grid;
+  }
+
+  /* --- クロマブリード（YIQのI/Qだけ横方向に引き伸ばす） --- */
+  vec2 iq = vec2(0.0);
+  float wsum = 0.0;
+  for(int i=0;i<TAPS;i++){
+    float fi = float(i);
+    vec3 s = tex(uv - vec2(fi * uBleed * 0.0035, 0.0));
+    float k = 1.0 - fi/float(TAPS);
+    iq += rgb2yiq(s).yz * k;
+    wsum += k;
+  }
+  iq /= max(wsum, 0.0001);
+  vec3  rawC = tex(uv);
+  float luma = rgb2yiq(rawC).x;
+  vec3 col = yiq2rgb(vec3(luma, iq));
+
+  /* --- ソフトフォーカス（レンズに息を吹きかけたような甘さ） --- */
+  if(uSoft > 0.001){
+    vec3 sb = ringBlur(uv, 0.005 + uSoft*0.011, aspect);
+    col = mix(col, max(col, sb), uSoft*0.9);
+  }
+
+  /* --- RGBシフト --- */
+  float kr = clamp(uRgb*6.0, 0.0, 1.0);
+  float amt = uRgb * 0.012 + bOn * uBlock * 0.01;
+  col.r = mix(col.r, tex(uv + vec2(amt, 0.0)).r, kr);
+  col.b = mix(col.b, tex(uv - vec2(amt, 0.0)).b, kr);
+
+  /* --- レンズの色ズレ：画面の端ほど赤と青が離れる --- */
+  if(uAberr > 0.001){
+    vec2  adir = vUv - 0.5;
+    float a2 = uAberr * 0.10 * dot(adir, adir);
+    col.r += tex(uv + adir*a2).r - rawC.r;
+    col.b += tex(uv - adir*a2).b - rawC.b;
+  }
+
+  /* --- ブルーム：明るいところがにじんで光る --- */
+  if(uBloom > 0.001){
+    vec3 bl = vec3(0.0);
+    for(int i=0;i<12;i++){
+      float a  = float(i) * 0.5236;
+      float rr = mix(0.013, 0.032, step(5.5, float(i)));
+      bl += tex(uv + vec2(cos(a), sin(a)) * rr * aspect);
+    }
+    bl /= 12.0;
+    col += max(bl - 0.58, vec3(0.0)) * 2.4 * uBloom;
+  }
+
+  /* --- 残像・尾引き（前フレームのフィードバック） --- */
+  vec3 prev = texture2D(uPrev, clamp(vUv - vec2(0.0016, 0.0), vec2(0.0), vec2(1.0))).rgb;
+  col = mix(col, max(col, prev * 0.985), uGhost);
+
+  /* --- 色反転ノイズ ---
+     ずらしブロックより粗い格子で、数を絞って出す。
+     細かい格子のまま出すと色の粒が散らばって安っぽく見えるため。 */
+  vec2  ibid  = floor(vUv * vec2(9.0, 6.0));
+  float invOn = step(1.0 - uInvert*0.07, hash21(ibid + bt*5.5 + 41.0));
+  col = mix(col, vec3(1.0) - col.bgr, invOn * uInvert * 0.85);
+
+  /* --- ドロップアウト（テープの傷）---
+     1ピクセル幅の細い線を数本だけ、位置・長さ・明るさをすべてランダムに出す。
+     線の手前に軽い黒を置くと、テープが一瞬信号を失った感じになる。 */
+  float px = 1.0 / uRes.y;
+  for(int i=0;i<3;i++){
+    float fi = float(i);
+    float slot = floor(t*11.0 + fi*37.0);            // 本ごとに違うタイミングで入れ替わる
+    float r0 = hash21(vec2(slot, fi*5.3));
+    float on = step(1.0 - uDrop*0.55, r0);           // ほとんどのコマでは出ない
+
+    float ey   = hash21(vec2(slot+1.7, fi*2.9));     // 縦位置：格子に乗らない完全ランダム
+    float ex0  = hash21(vec2(slot+4.3, fi*7.1)) * 0.9;
+    float rl   = hash21(vec2(slot+8.9, fi*3.7));
+    float elen = 0.012 + rl*rl * 0.16;               // 短いものが出やすい
+    float thin = 0.5 + hash21(vec2(slot+2.2, fi)) * 0.7;  // 0.5〜1.2px
+    float bri  = 0.55 + hash21(vec2(slot+6.6, fi)) * 0.45;
+
+    float line = 1.0 - smoothstep(px*thin*0.5, px*thin*1.6, abs(vUv.y - ey));
+    float xr   = (vUv.x - ex0) / elen;
+    float seg  = step(0.0, xr) * step(xr, 1.0)
+               * smoothstep(0.0, 0.18, xr) * smoothstep(1.0, 0.82, xr);  // 端をぼかす
+    float lead = step(-0.035, vUv.x - ex0) * step(vUv.x - ex0, 0.0);     // 直前の黒
+
+    col *= 1.0 - line * lead * 0.55 * on;
+    col  = mix(col, vec3(bri, bri, bri*1.03), line * seg * on);
+  }
+
+  /* --- ざらつきノイズ（暗部ほど強く＝夜の映像らしくなる） --- */
+  float n = hash21(gl_FragCoord.xy + vec2(t*91.7, t*57.3));
+  float lum0 = dot(col, vec3(0.299, 0.587, 0.114));
+  float grainW = mix(1.5, 0.85, smoothstep(0.0, 0.65, lum0));
+  col += (n - 0.5) * uNoise * 0.5 * grainW;
+  /* たまに走る小さな白点（スノーノイズ） */
+  col += step(0.997 - uNoise*0.0025, n) * uNoise * 0.45;
+
+  /* --- 走査線 / インターレース --- */
+  float scanline = 0.5 + 0.5 * sin(vUv.y * uRes.y * 3.14159);
+  col *= 1.0 - uScan * 0.45 * scanline;
+  float field = mod(srow + floor(t*60.0), 2.0);
+  col *= 1.0 - uInterlace * 0.22 * field;
+
+  /* --- 明滅（不安定な電源・照明。ホラー向け） --- */
+  float fl = 1.0
+           + (vnoise(vec2(t*6.5, 3.0)) - 0.5) * uFlicker * 0.85
+           + (hash11(floor(t*26.0)) - 0.5) * uFlicker * 0.3;
+  col *= fl;
+
+  /* --- ロール時の継ぎ目：黒帯＋ノイズで隠す --- */
+  if(uRoll > 0.001){
+    float ds = abs(vUv.y - (1.0 - rollOff));
+    ds = min(ds, 1.0 - ds);
+    float bar = smoothstep(0.028, 0.0, ds);
+    float bn  = hash21(gl_FragCoord.xy + vec2(t*133.0, t*71.0));
+    col = mix(col, vec3(bn * 0.35 + 0.02), bar * 0.9);
+  }
+
+  /* --- カラー調整 --- */
+  float l = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(vec3(l), col, uSat);
+  col = (col - 0.5) * uContrast + 0.5 + uBright;
+
+  /* --- 色味（暗視の緑・夜の青・セピアなど） --- */
+  col = mix(col, col * uTintCol, uTint);
+
+  /* --- 褪せ：黒が浮いて白っぽくなる。色味で選んだ色に寄せる --- */
+  if(uFade > 0.001){
+    vec3  haze = mix(vec3(1.0), uTintCol, 0.55);
+    float lum2 = dot(col, vec3(0.299, 0.587, 0.114));
+    col = mix(col, haze, uFade * (0.75 - 0.5*lum2));
+  }
+
+  /* --- 光漏れ：画面の外から柔らかい光が差し込む --- */
+  if(uLeak > 0.001){
+    float la = t * 0.13;
+    vec2  lp = vec2(0.5 + cos(la)*0.78, 0.5 + sin(la*0.7)*0.72);
+    float lg = smoothstep(0.85, 0.05, distance(vUv, lp));
+    col += mix(vec3(1.0, 0.62, 0.42), uTintCol, 0.4) * lg * uLeak * 0.5;
+  }
+
+  /* --- 周辺減光 --- */
+  float d = distance(vUv, vec2(0.5));
+  col *= 1.0 - uVig * smoothstep(0.34, 0.86, d) * 0.95;
+
+  /* --- 低画質デジカメ：色の段差（トーンジャンプ） --- */
+  if(uLofi > 0.001){
+    float qs = mix(255.0, 9.0, uLofi);
+    col = floor(clamp(col, 0.0, 1.0) * qs + 0.5) / qs;
+  }
+
+  /* --- きらめき：明るいところに小さな星が瞬く --- */
+  if(uSpark > 0.001){
+    vec2  sg  = vec2(16.0, 9.0);
+    vec2  sid = floor(vUv * sg);
+    vec2  sf  = fract(vUv * sg) - 0.5;
+    sf -= (vec2(hash21(sid+1.3), hash21(sid+5.9)) - 0.5) * 0.55;   // 格子の中でも位置をずらす
+    float on  = step(1.0 - uSpark*0.4, hash21(sid + 3.0));
+    float tw  = 0.5 + 0.5 * sin(t*2.4 + hash21(sid + 11.0) * 6.283);
+    vec2  q   = sf * vec2(sg.x/sg.y, 1.0);
+    float star = exp(-abs(q.x)*40.0) * exp(-abs(q.y)*7.0)
+               + exp(-abs(q.y)*40.0) * exp(-abs(q.x)*7.0);
+    float lum3 = dot(clamp(col,0.0,1.0), vec3(0.299, 0.587, 0.114));
+    col += star * on * tw * uSpark * smoothstep(0.3, 0.8, lum3) * 1.1;
+  }
+
+  gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
+}`;
+
+const BLIT_FRAG = `
+precision mediump float;
+varying vec2 vUv;
+uniform sampler2D uTex;
+void main(){ gl_FragColor = texture2D(uTex, vUv); }`;
+
+let gl, progFx, progBlit, quad, videoTex, fbos = [], cur = 0, uni = {}, uniBlit = {};
+
+function compile(src, type){
+  const sh = gl.createShader(type);
+  gl.shaderSource(sh, src);
+  gl.compileShader(sh);
+  if(!gl.getShaderParameter(sh, gl.COMPILE_STATUS)){
+    throw new Error('shader: ' + gl.getShaderInfoLog(sh));
+  }
+  return sh;
+}
+function link(vs, fs){
+  const p = gl.createProgram();
+  gl.attachShader(p, compile(vs, gl.VERTEX_SHADER));
+  gl.attachShader(p, compile(fs, gl.FRAGMENT_SHADER));
+  gl.bindAttribLocation(p, 0, 'aPos');
+  gl.linkProgram(p);
+  if(!gl.getProgramParameter(p, gl.LINK_STATUS)){
+    throw new Error('link: ' + gl.getProgramInfoLog(p));
+  }
+  return p;
+}
+
+function initGL(){
+  gl = glCanvas.getContext('webgl', {preserveDrawingBuffer:false, antialias:false, alpha:false});
+  if(!gl) throw new Error('WebGLが使えません');
+
+  progFx   = link(VERT, FRAG);
+  progBlit = link(VERT, BLIT_FRAG);
+
+  quad = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, quad);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 3,-1, -1,3]), gl.STATIC_DRAW);
+  gl.enableVertexAttribArray(0);
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
+
+  videoTex = createTex();
+
+  const names = ['uTex','uPrev','uRes','uTime','uMirror','uBleed','uRgb','uNoise','uScan','uWobble',
+                 'uTrack','uGhost','uDrop','uInterlace','uBlock','uSlice','uWave','uInvert',
+                 'uFlicker','uRoll','uBloom','uSoft','uFade','uAberr','uFish','uBreathe',
+                 'uLofi','uLeak','uSpark','uSym',
+                 'uSat','uContrast','uBright','uVig','uTint','uTintCol'];
+  names.forEach(n => uni[n] = gl.getUniformLocation(progFx, n));
+  uniBlit.uTex = gl.getUniformLocation(progBlit, 'uTex');
+}
+
+function createTex(){
+  const t = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  return t;
+}
+
+function makeFbo(w, h){
+  const tex = createTex();
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+  const fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  return {fb, tex, w, h};
+}
+
+function resizeTargets(w, h){
+  if(glCanvas.width === w && glCanvas.height === h && fbos.length) return;
+  glCanvas.width = w;  glCanvas.height = h;
+  outCanvas.width = w; outCanvas.height = h;
+  fbos.forEach(f => { gl.deleteFramebuffer(f.fb); gl.deleteTexture(f.tex); });
+  fbos = [makeFbo(w, h), makeFbo(w, h)];
+  fitCanvas();
+}
+
+function fitCanvas(){
+  // コントロール（ドック）の高さ分を空けて、アスペクトを保ったまま最大表示
+  const dockH = document.getElementById('dock').offsetHeight;
+  document.getElementById('stage').style.paddingBottom = dockH + 'px';
+  const vw = window.innerWidth, vh = Math.max(120, window.innerHeight - dockH);
+  const ar = outCanvas.width / outCanvas.height;
+  let w = vw, h = vw / ar;
+  if(h > vh){ h = vh; w = vh * ar; }
+  outCanvas.style.width  = Math.round(w) + 'px';
+  outCanvas.style.height = Math.round(h) + 'px';
+}
+window.addEventListener('resize', fitCanvas);
+window.addEventListener('orientationchange', () => setTimeout(fitCanvas, 300));
+
+/* ---------------- 描画ループ ---------------- */
+let lastT = 0, fpsAcc = 0, fpsN = 0, startTime = performance.now();
+
+function effective(){
+  // グリッチバースト（自動 or ボタン長押し）を上乗せした実効パラメータ
+  const now = performance.now();
+  const b = S.hold ? 1 : (now < S.burstUntil ? 1 : 0);
+  if(!b) return P;
+  const e = Object.assign({}, P);
+  e.block  = Math.min(1, P.block  + 0.8);
+  e.slice  = Math.min(1, P.slice  + 0.6);
+  e.rgb    = Math.min(1, P.rgb    + 0.5);
+  e.wave   = Math.min(1, P.wave   + 0.35);
+  e.invert = Math.min(1, P.invert + 0.4);
+  e.noise  = Math.min(1, P.noise  + 0.25);
+  e.track  = Math.min(1, P.track  + 0.4);
+  e.drop   = Math.min(1, P.drop   + 0.35);
+  e.roll   = Math.min(1, P.roll   + 0.15);
+  return e;
+}
+
+function render(now){
+  if(!S.running) return;
+  requestAnimationFrame(render);
+
+  if(video.readyState < 2 || !video.videoWidth) return;
+
+  const dt = (now - lastT) / 1000;
+  lastT = now;
+  if(dt > 0 && dt < 1){ fpsAcc += 1/dt; fpsN++; }
+  if(fpsN >= 20){
+    document.getElementById('fps').textContent = Math.round(fpsAcc/fpsN) + ' FPS';
+    fpsAcc = 0; fpsN = 0;
+  }
+
+  const w = video.videoWidth, h = video.videoHeight;
+  resizeTargets(w, h);
+
+  S.frame++;
+  // コマ落ち：stutter に応じて映像の取り込みを間引く
+  const skip = Math.round(P.stutter * 4);
+  if(skip === 0 || S.frame % (skip + 1) === 0){
+    gl.bindTexture(gl.TEXTURE_2D, videoTex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+  }
+
+  const e = effective();
+  const t = (now - startTime) / 1000;
+  const src = fbos[cur], dst = fbos[1 - cur];
+
+  // --- エフェクトパス（FBOへ） ---
+  gl.bindFramebuffer(gl.FRAMEBUFFER, dst.fb);
+  gl.viewport(0, 0, w, h);
+  gl.useProgram(progFx);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, videoTex); gl.uniform1i(uni.uTex, 0);
+  gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, src.tex);  gl.uniform1i(uni.uPrev, 1);
+  gl.uniform2f(uni.uRes, w, h);
+  gl.uniform1f(uni.uTime, t);
+  gl.uniform1f(uni.uMirror, S.mirror ? 1 : 0);
+  gl.uniform1f(uni.uBleed, e.bleed);
+  gl.uniform1f(uni.uRgb, e.rgb);
+  gl.uniform1f(uni.uNoise, e.noise);
+  gl.uniform1f(uni.uScan, e.scan);
+  gl.uniform1f(uni.uWobble, e.wobble);
+  gl.uniform1f(uni.uTrack, e.track);
+  gl.uniform1f(uni.uGhost, e.ghost);
+  gl.uniform1f(uni.uDrop, e.drop);
+  gl.uniform1f(uni.uInterlace, e.interlace);
+  gl.uniform1f(uni.uBlock, e.block);
+  gl.uniform1f(uni.uSlice, e.slice);
+  gl.uniform1f(uni.uWave, e.wave);
+  gl.uniform1f(uni.uInvert, e.invert);
+  gl.uniform1f(uni.uFlicker, e.flicker);
+  gl.uniform1f(uni.uRoll, e.roll);
+  gl.uniform1f(uni.uBloom, e.bloom);
+  gl.uniform1f(uni.uSoft, e.soft);
+  gl.uniform1f(uni.uFade, e.fade);
+  gl.uniform1f(uni.uAberr, e.aberr);
+  gl.uniform1f(uni.uFish, e.fish);
+  gl.uniform1f(uni.uBreathe, e.breathe);
+  gl.uniform1f(uni.uLofi, e.lofi);
+  gl.uniform1f(uni.uLeak, e.leak);
+  gl.uniform1f(uni.uSpark, e.spark);
+  gl.uniform1f(uni.uSym, S.symIdx);
+  gl.uniform1f(uni.uSat, e.sat);
+  gl.uniform1f(uni.uContrast, e.contrast);
+  gl.uniform1f(uni.uBright, e.bright);
+  gl.uniform1f(uni.uVig, e.vig);
+  gl.uniform1f(uni.uTint, e.tint);
+  const tc = (TINTS[S.tintIdx] || TINTS[0]).col;
+  gl.uniform3f(uni.uTintCol, tc[0], tc[1], tc[2]);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  // --- 画面（glCanvas）へ転送 ---
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.viewport(0, 0, w, h);
+  gl.useProgram(progBlit);
+  gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, dst.tex);
+  gl.uniform1i(uniBlit.uTex, 0);
+  gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+  cur = 1 - cur;
+
+  // --- 2Dキャンバスへ合成（OSDを重ねる。録画対象はこちら） ---
+  octx.drawImage(glCanvas, 0, 0);
+  if(S.osd) drawOSD(t);
+
+  // 自動グリッチ：頻度は控えめなほど「たまに一瞬だけ壊れる」ホラー向きになる
+  if(S.auto && now > S.burstUntil){
+    const rate = 0.0015 + P.autoRate * P.autoRate * 0.05;
+    if(Math.random() < rate){
+      // ほとんどは一瞬。まれに長く尾を引く
+      const long = Math.random() < 0.15;
+      S.burstUntil = now + (long ? 260 + Math.random()*420 : 40 + Math.random()*140);
+    }
+  }
+}
+
+/* ---------------- OSD（カムコーダー風表示） ---------------- */
+function two(n){ return String(n).padStart(2, '0'); }
+
+function drawOSD(t){
+  const w = outCanvas.width, h = outCanvas.height;
+  const s = h / 720;                      // 720pを基準にスケール
+  const pad = Math.round(28 * s);
+  const fs  = Math.round(30 * s);
+  octx.save();
+  octx.font = `700 ${fs}px 'JetBrains Mono', monospace`;
+  octx.textBaseline = 'top';
+  octx.shadowColor = 'rgba(0,0,0,.55)';
+  octx.shadowBlur = Math.round(6 * s);
+
+  const d = new Date();
+  const ampm = d.getHours() < 12 ? 'AM' : 'PM';
+  const hh = d.getHours() % 12 === 0 ? 12 : d.getHours() % 12;
+  const time = `${ampm} ${two(hh)}:${two(d.getMinutes())}`;
+  const date = `${two(d.getMonth()+1)}.${two(d.getDate())}.${String(d.getFullYear()).slice(2)}`;
+
+  // 左上：REC / PAUSE / STBY
+  const rs = recorder ? recorder.state : 'inactive';
+  const blink = Math.floor(t*2) % 2 === 0;
+  let recText = '■ STBY', recColor = '#ffffff';
+  if(rs === 'recording'){ recText = blink ? '● REC'   : '  REC';   recColor = '#ff4b3e'; }
+  else if(rs === 'paused'){ recText = blink ? '‖ PAUSE' : '  PAUSE'; recColor = '#ffd34d'; }
+  chroma(recText, pad, pad, recColor, s);
+
+  // 右上：SP
+  octx.textAlign = 'right';
+  chroma('SP', w - pad, pad, '#ffffff', s);
+  octx.textAlign = 'left';
+
+  // 左下：日付・時刻
+  chroma(time, pad, h - pad - fs*2.3, '#ffffff', s);
+  chroma(date, pad, h - pad - fs*1.1, '#ffffff', s);
+
+  // 右下：タイムコード
+  octx.textAlign = 'right';
+  const tc = (rs === 'recording' || rs === 'paused') ? recSeconds() : t;
+  chroma(`${two(Math.floor(tc/60))}:${two(Math.floor(tc%60))}:${two(Math.floor((tc*30)%30))}`,
+         w - pad, h - pad - fs*1.1, '#ffffff', s);
+  octx.restore();
+}
+
+// 文字をわずかにRGBずらして描く（にじんだ焼き込み文字風）
+function chroma(text, x, y, color, s){
+  const o = Math.max(1, 1.6 * s);
+  octx.globalCompositeOperation = 'lighter';
+  octx.fillStyle = 'rgba(255,0,90,.5)';  octx.fillText(text, x - o, y);
+  octx.fillStyle = 'rgba(0,220,255,.5)'; octx.fillText(text, x + o, y);
+  octx.globalCompositeOperation = 'source-over';
+  octx.fillStyle = color;                octx.fillText(text, x, y);
+}
+
+/* ---------------- カメラ ---------------- */
+let stream = null;
+
+async function startCamera(){
+  stopStream();
+  const res = {480:{w:854,h:480}, 720:{w:1280,h:720}, 1080:{w:1920,h:1080}}[S.resolution];
+  const videoC = {
+    width:  {ideal: res.w},
+    height: {ideal: res.h},
+    frameRate:{ideal: S.speed < 1 ? 60 : 30}   // スロー撮影は高フレームレートのほうがなめらか
+  };
+  if(S.deviceId) videoC.deviceId = {exact: S.deviceId};
+  else           videoC.facingMode = {ideal: S.facing};
+
+  const tryGet = c => navigator.mediaDevices.getUserMedia(c);
+
+  try{
+    stream = await tryGet({video: videoC, audio: S.audio});
+  }catch(err){
+    // マイクだけ拒否された場合は映像のみで続行
+    if(S.audio && err.name !== 'NotAllowedError'){
+      try{
+        stream = await tryGet({video: videoC, audio:false});
+        S.audio = false; syncSwitches();
+        toast('マイクが使えないため音声なしになります');
+      }catch(e2){ /* 下の緩和条件へ */ }
+    }
+    if(!stream){
+      // 解像度やデバイス指定が厳しすぎる場合は条件を緩めて再挑戦
+      if(err.name === 'OverconstrainedError' || err.name === 'NotFoundError' || err.name === 'NotReadableError'){
+        S.deviceId = null;
+        try{
+          stream = await tryGet({video:{facingMode:{ideal:S.facing}}, audio:S.audio});
+          toast('カメラ条件を自動調整しました');
+        }catch(e3){ throw err; }
+      }else{
+        throw err;
+      }
+    }
+  }
+
+  video.srcObject = stream;
+  await video.play().catch(()=>{});
+  await refreshDevices();
+}
+
+function stopStream(){
+  if(stream){ stream.getTracks().forEach(t => t.stop()); stream = null; }
+}
+
+async function refreshDevices(){
+  const sel = document.getElementById('camSelect');
+  try{
+    const devs = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+    const currentId = stream ? stream.getVideoTracks()[0].getSettings().deviceId : null;
+    sel.innerHTML = devs.map((d,i) =>
+      `<option value="${d.deviceId}"${d.deviceId===currentId?' selected':''}>${escapeHtml(d.label || ('カメラ ' + (i+1)))}</option>`
+    ).join('');
+    document.getElementById('camVal').textContent = devs.length + '台';
+  }catch(e){ /* ignore */ }
+}
+
+async function flipCamera(){
+  S.deviceId = null;
+  S.facing = (S.facing === 'environment') ? 'user' : 'environment';
+  S.mirror = (S.facing === 'user');
+  syncSwitches();
+  try{ await startCamera(); }catch(e){ toast('カメラを切り替えられませんでした'); }
+}
+
+/* ---------------- 録画 / 撮影 ---------------- */
+let recorder = null, chunks = [], recTimer = null, lastBlob = null, lastName = '';
+let recPaused = false, recElapsed = 0, segStart = 0, cutCount = 1, lastRecSeconds = 0;
+
+// 一時停止を挟んだ実録画時間（秒）
+function recSeconds(){
+  return (recElapsed + (recPaused ? 0 : performance.now() - segStart)) / 1000;
+}
+
+function pickMime(){
+  const list = [
+    'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+    'video/mp4;codecs=avc1',
+    'video/mp4',
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm'
+  ];
+  for(const m of list){
+    if(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(m)) return m;
+  }
+  return '';
+}
+
+function startRec(){
+  if(!window.MediaRecorder || !outCanvas.captureStream){
+    toast('この端末・ブラウザでは録画に対応していません');
+    return;
+  }
+  const cs = outCanvas.captureStream(30);
+  if(S.audio && stream){
+    stream.getAudioTracks().forEach(tr => cs.addTrack(tr));
+  }
+  const mime = pickMime();
+  try{
+    recorder = mime ? new MediaRecorder(cs, {mimeType: mime, videoBitsPerSecond: 8_000_000})
+                    : new MediaRecorder(cs);
+  }catch(e){
+    try{ recorder = new MediaRecorder(cs); }
+    catch(e2){ toast('録画を開始できませんでした'); return; }
+  }
+  chunks = [];
+  recorder.ondataavailable = ev => { if(ev.data && ev.data.size) chunks.push(ev.data); };
+  recorder.onstop = async () => {
+    const type = recorder.mimeType || mime || 'video/mp4';
+    const ext  = type.includes('mp4') ? 'mp4' : 'webm';
+    let blob = new Blob(chunks, {type});
+
+    if(S.speed !== 1 && blob.size > 0){
+      blob = await convertSpeed(blob, S.speed, type, lastRecSeconds);
+    }
+    lastBlob = blob;
+    lastName = `yumetape_${stamp()}${S.speed !== 1 ? '_' + String(S.speed).replace('.','') + 'x' : ''}.${ext}`;
+    showResult(lastBlob, 'video');
+  };
+  recorder.start(200);
+
+  recPaused = false;
+  recElapsed = 0;
+  segStart = performance.now();
+  cutCount = 1;
+  requestWakeLock();
+
+  document.getElementById('shutter').classList.add('recording');
+  document.getElementById('recBadge').classList.add('on');
+  document.getElementById('settingsBtn').classList.add('hide');
+  document.getElementById('presetBadge').classList.add('hide');   // 上の帯が詰まるので録画中は隠す
+  document.getElementById('pauseBtn').classList.toggle('on', canPause());
+  updateCutBadge();
+
+  recTimer = setInterval(() => {
+    const s = Math.floor(recSeconds());
+    document.getElementById('recTime').textContent = `${Math.floor(s/60)}:${two(s%60)}`;
+  }, 250);
+}
+
+function canPause(){
+  return !!(recorder && typeof recorder.pause === 'function' && typeof recorder.resume === 'function');
+}
+
+// ストップウォッチのラップのように、録画を止めずに区切る
+function togglePause(){
+  if(!recorder || recorder.state === 'inactive') return;
+  if(!canPause()){ toast('この端末では一時停止に対応していません'); return; }
+
+  const btn = document.getElementById('pauseBtn');
+  if(!recPaused){
+    recorder.pause();
+    recElapsed += performance.now() - segStart;
+    recPaused = true;
+    btn.textContent = '▶';
+    btn.classList.add('paused');
+    btn.setAttribute('aria-label', '録画を再開');
+    document.getElementById('recBadge').classList.add('paused');
+  }else{
+    recorder.resume();
+    segStart = performance.now();
+    recPaused = false;
+    cutCount++;
+    btn.textContent = '‖';
+    btn.classList.remove('paused');
+    btn.setAttribute('aria-label', '録画を一時停止');
+    document.getElementById('recBadge').classList.remove('paused');
+    updateCutBadge();
+  }
+}
+
+function updateCutBadge(){
+  const el = document.getElementById('cutBadge');
+  el.textContent = `CUT ${cutCount}`;
+  el.classList.toggle('on', cutCount > 1 || (recorder && recorder.state !== 'inactive'));
+}
+
+function stopRec(){
+  if(recorder && recorder.state !== 'inactive'){
+    lastRecSeconds = recSeconds();     // 変換の進み具合を出すために実録画時間を控えておく
+    if(recPaused) recorder.resume();   // 一時停止のまま stop すると出力されない環境がある
+    recorder.stop();
+  }
+  clearInterval(recTimer);
+  releaseWakeLock();
+  recPaused = false;
+  const btn = document.getElementById('pauseBtn');
+  btn.textContent = '‖';
+  btn.classList.remove('on', 'paused');
+  document.getElementById('settingsBtn').classList.remove('hide');
+  document.getElementById('presetBadge').classList.remove('hide');
+  document.getElementById('shutter').classList.remove('recording');
+  document.getElementById('recBadge').classList.remove('on', 'paused');
+  document.getElementById('cutBadge').classList.remove('on');
+}
+
+/* ---------------- 速度変換（スロー／早回し） ---------------- */
+let convertCancelled = false;
+
+function convertSpeed(blob, speed, type, hintSeconds){
+  return new Promise(resolve => {
+    const modal = document.getElementById('convertModal');
+    const bar   = document.getElementById('convertBar');
+    const title = document.getElementById('convertTitle');
+    const note  = document.getElementById('convertNote');
+    title.textContent = (speed < 1 ? 'スローに変換中…' : '早回しに変換中…');
+    const waitSec = hintSeconds ? Math.ceil(hintSeconds / speed) : 0;
+    note.textContent = waitSec
+      ? `およそ${waitSec}秒かかります。この画面のままお待ちください。`
+      : '録画した映像の速度を変えています。この画面のままお待ちください。';
+    bar.style.width = '0%';
+    modal.classList.add('show');
+    convertCancelled = false;
+
+    const finish = (result) => {
+      modal.classList.remove('show');
+      cleanup();
+      resolve(result);
+    };
+
+    const v = document.createElement('video');
+    v.muted = true; v.playsInline = true; v.preload = 'auto';
+    v.setAttribute('playsinline', '');
+    const srcUrl = URL.createObjectURL(blob);
+    v.src = srcUrl;
+
+    let raf = null, rec = null, started = performance.now();
+    const cleanup = () => {
+      if(raf) cancelAnimationFrame(raf);
+      try{ v.pause(); }catch(e){}
+      URL.revokeObjectURL(srcUrl);
+    };
+
+    document.getElementById('convertCancel').onclick = () => {
+      convertCancelled = true;
+      try{ if(rec && rec.state !== 'inactive') rec.stop(); }catch(e){}
+      finish(blob);                       // 元の速度のまま返す
+    };
+
+    v.onerror = () => finish(blob);
+
+    /* MediaRecorderが作った動画は長さが未確定（0やInfinity）のことがある。
+       いったん末尾までシークさせて実際の長さを確定させる。 */
+    function resolveDuration(){
+      return new Promise(res => {
+        if(isFinite(v.duration) && v.duration > 0) return res(v.duration);
+        let done = false;
+        const onDur = () => {
+          if(done || !isFinite(v.duration) || v.duration <= 0) return;
+          done = true;
+          v.removeEventListener('durationchange', onDur);
+          v.currentTime = 0;
+          res(v.duration);
+        };
+        v.addEventListener('durationchange', onDur);
+        try{ v.currentTime = 1e101; }catch(e){}
+        setTimeout(() => {
+          if(done) return;
+          done = true;
+          v.removeEventListener('durationchange', onDur);
+          try{ v.currentTime = 0; }catch(e){}
+          res(isFinite(v.duration) && v.duration > 0 ? v.duration : 0);
+        }, 2000);
+      });
+    }
+
+    v.onloadedmetadata = async () => {
+      const w = v.videoWidth, h = v.videoHeight;
+      if(!w || !h){ finish(blob); return; }
+
+      const cv = document.createElement('canvas');
+      cv.width = w; cv.height = h;
+      const cx = cv.getContext('2d', {alpha:false});
+      const out = cv.captureStream(30);
+      const mime = pickMime();
+      try{
+        rec = mime ? new MediaRecorder(out, {mimeType:mime, videoBitsPerSecond:8_000_000})
+                   : new MediaRecorder(out);
+      }catch(e){ finish(blob); return; }
+
+      const parts = [];
+      rec.ondataavailable = ev => { if(ev.data && ev.data.size) parts.push(ev.data); };
+      rec.onstop = () => {
+        if(convertCancelled) return;
+        const res = (parts.length && parts.reduce((n,p) => n + p.size, 0) > 1024)
+          ? new Blob(parts, {type: rec.mimeType || type})
+          : blob;                                    // 変換に失敗したら元の映像を残す
+        finish(res);
+      };
+
+      // 録画時間が分かっていればそれを使う（長さの確定待ちを省ける）
+      const dur = hintSeconds > 0.2 ? hintSeconds : await resolveDuration();
+      if(convertCancelled) return;
+      const estimate = dur ? (dur / speed) * 1000 : 0;
+
+      const draw = () => {
+        cx.drawImage(v, 0, 0, w, h);
+        const prog = dur ? (v.currentTime / dur)
+                         : (estimate ? (performance.now() - started) / estimate : 0);
+        bar.style.width = Math.min(99, Math.max(0, prog * 100)).toFixed(0) + '%';
+        raf = requestAnimationFrame(draw);
+      };
+
+      // 終了処理は ended・再生停滞の見張り・どちらから来ても1回だけ動かす
+      let ending = false;
+      const endNow = () => {
+        if(ending) return;
+        ending = true;
+        clearInterval(watchdog);
+        bar.style.width = '100%';
+        setTimeout(() => {
+          if(raf) cancelAnimationFrame(raf);
+          try{ if(rec.state !== 'inactive') rec.stop(); else finish(blob); }
+          catch(e){ finish(blob); }
+        }, 150);
+      };
+      v.onended = endNow;
+
+      // 長さが取れない動画でも止まらないよう、再生位置が進まなくなったら終わりとみなす
+      let seen = -1, stalled = 0;
+      const watchdog = setInterval(() => {
+        if(v.currentTime === seen) stalled += 250; else { stalled = 0; seen = v.currentTime; }
+        if(dur && v.currentTime >= dur - 0.05) endNow();
+        if(stalled >= 1200 && performance.now() - started > 1500) endNow();
+      }, 250);
+
+      v.playbackRate = speed;
+      try{ await v.play(); }
+      catch(e){ clearInterval(watchdog); finish(blob); return; }
+
+      rec.start(200);
+      started = performance.now();
+      draw();
+    };
+  });
+}
+
+function takePhoto(){
+  const fl = document.getElementById('flash');
+  fl.classList.remove('fire'); void fl.offsetWidth; fl.classList.add('fire');
+  outCanvas.toBlob(b => {
+    if(!b){ toast('写真を保存できませんでした'); return; }
+    lastBlob = b;
+    lastName = `yumetape_${stamp()}.jpg`;
+    showResult(b, 'image');
+  }, 'image/jpeg', 0.92);
+}
+
+function stamp(){
+  const d = new Date();
+  return `${d.getFullYear()}${two(d.getMonth()+1)}${two(d.getDate())}_${two(d.getHours())}${two(d.getMinutes())}${two(d.getSeconds())}`;
+}
+
+/* ---------------- 結果表示 ---------------- */
+let resultUrl = null;
+
+function showResult(blob, kind){
+  const holder = document.getElementById('resultHolder');
+  if(resultUrl) URL.revokeObjectURL(resultUrl);
+  resultUrl = URL.createObjectURL(blob);
+  holder.innerHTML = kind === 'video'
+    ? `<video id="resultMedia" src="${resultUrl}" controls playsinline autoplay loop></video>`
+    : `<img id="resultMedia" src="${resultUrl}" alt="撮影結果">`;
+  document.getElementById('resultInfo').textContent =
+    `${lastName} / ${(blob.size/1024/1024).toFixed(1)} MB`;
+  document.getElementById('result').classList.add('show');
+}
+
+async function shareResult(){
+  if(!lastBlob) return;
+  const file = new File([lastBlob], lastName, {type: lastBlob.type});
+  if(navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file]}); }
+    catch(e){ /* キャンセルは無視 */ }
+  }else{
+    downloadResult();
+    toast('共有に非対応のためダウンロードしました');
+  }
+}
+
+function downloadResult(){
+  if(!lastBlob) return;
+  const a = document.createElement('a');
+  a.href = resultUrl || URL.createObjectURL(lastBlob);
+  a.download = lastName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+/* ---------------- UI 構築 ---------------- */
+/* ---------------- マイプリセット ---------------- */
+// 保存キーは旧名のまま。localStorageは origin 単位なので、
+// 名前を変えると以前の場所で保存した設定・マイプリセットが読めなくなる。
+const MY_KEY = 'vhscam.myPresets.v1';
+let MY = [];
+
+function loadMyPresets(){
+  try{
+    const raw = localStorage.getItem(MY_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  }catch(e){ return []; }
+}
+function saveMyPresets(){
+  try{ localStorage.setItem(MY_KEY, JSON.stringify(MY)); }catch(e){}
+}
+function addMyPreset(name){
+  MY.push({name, p: Object.assign({}, P), tintIdx: S.tintIdx, symIdx: S.symIdx});
+  saveMyPresets();
+  buildPresets();
+  buildMyList();
+  applyPreset('m:' + (MY.length - 1));
+  toast(`「${name}」を保存しました`);
+}
+function removeMyPreset(i){
+  const name = MY[i].name;
+  MY.splice(i, 1);
+  saveMyPresets();
+  if(S.presetId === 'm:' + i) S.presetId = null;
+  buildPresets();
+  buildMyList();
+  markActivePreset();
+  toast(`「${name}」を削除しました`);
+}
+function buildMyList(){
+  const el = document.getElementById('myList');
+  if(MY.length === 0){
+    el.innerHTML = `<div class="my-empty">まだありません。スライダーを好みに調整してから、上のボタンで保存できます。保存した設定はプリセット一覧の「マイ」に並びます。</div>`;
+    return;
+  }
+  el.innerHTML = MY.map((m,i) =>
+    `<div class="my-row"><span>${escapeHtml(m.name)}</span>
+       <button class="del" data-i="${i}" aria-label="削除">✕</button></div>`).join('');
+  el.querySelectorAll('.del').forEach(b => {
+    b.addEventListener('click', () => removeMyPreset(+b.dataset.i));
+  });
+}
+
+/* ---------------- プリセット一覧 ---------------- */
+function buildPresets(){
+  const el = document.getElementById('presets');
+  let group = null, html = '';
+  PRESETS.forEach((p,i) => {
+    if(p.group !== group){
+      group = p.group;
+      html += `<span class="preset-group">${group}</span>`;
+    }
+    html += `<button class="preset" data-id="b:${i}">${escapeHtml(p.name)}</button>`;
+  });
+  if(MY.length){
+    html += `<span class="preset-group">マイ</span>`;
+    html += MY.map((m,i) => `<button class="preset" data-id="m:${i}">${escapeHtml(m.name)}</button>`).join('');
+  }
+  el.innerHTML = html;
+  el.querySelectorAll('.preset').forEach(b => {
+    b.addEventListener('click', () => applyPreset(b.dataset.id));
+  });
+}
+
+function getPreset(id){
+  if(!id) return null;
+  const [kind, n] = id.split(':');
+  return kind === 'm' ? MY[+n] : PRESETS[+n];
+}
+
+function markActivePreset(){
+  document.querySelectorAll('.preset').forEach(b => {
+    b.classList.toggle('active', b.dataset.id === S.presetId);
+  });
+}
+
+function applyPreset(id){
+  const preset = getPreset(id);
+  if(!preset) return;
+  S.presetId = id;
+  Object.assign(P, BASE, preset.p);
+  S.tintIdx = preset.tintIdx || 0;
+  S.symIdx  = preset.symIdx  || 0;
+
+  markActivePreset();
+  const sel = document.getElementById('tintSelect');
+  if(sel) sel.value = String(S.tintIdx);
+  const sym = document.getElementById('symSelect');
+  if(sym) sym.value = String(S.symIdx);
+  document.getElementById('presetBadge').textContent = preset.name;
+  syncSliders();
+  saveSettingsSoon();
+
+  // 選んだプリセットが画面外にあるときはスクロールして見せる
+  const btn = document.querySelector(`.preset[data-id="${id}"]`);
+  if(btn) btn.scrollIntoView({behavior:'smooth', block:'nearest', inline:'center'});
+}
+
+function buildSliders(){
+  const make = (defs, hostId) => {
+    const host = document.getElementById(hostId);
+    host.innerHTML = defs.map(d => `
+      <div class="field">
+        <label>${d.label}<span class="val mono" id="v_${d.key}">${P[d.key].toFixed(2)}</span></label>
+        <input type="range" id="s_${d.key}" min="${d.min}" max="${d.max}" step="${d.step}" value="${P[d.key]}">
+      </div>`).join('');
+    defs.forEach(d => {
+      const inp = document.getElementById('s_' + d.key);
+      inp.addEventListener('input', () => {
+        P[d.key] = parseFloat(inp.value);
+        document.getElementById('v_' + d.key).textContent = P[d.key].toFixed(2);
+        saveSettingsSoon();
+      });
+    });
+  };
+  make(PARAM_DEFS.vhs, 'vhsFields');
+  make(PARAM_DEFS.glitch, 'glitchFields');
+  make(PARAM_DEFS.dream, 'dreamFields');
+  make(PARAM_DEFS.color, 'colorFields');
+
+  const sym = document.getElementById('symSelect');
+  sym.innerHTML = SYMS.map((s,i) => `<option value="${i}">${s}</option>`).join('');
+  sym.value = String(S.symIdx);
+  sym.addEventListener('change', () => { S.symIdx = +sym.value; saveSettingsSoon(); });
+
+  const sel = document.getElementById('tintSelect');
+  sel.innerHTML = TINTS.map((t,i) => `<option value="${i}">${t.name}</option>`).join('');
+  sel.value = String(S.tintIdx);
+  sel.addEventListener('change', () => {
+    S.tintIdx = +sel.value;
+    // 「なし」以外を選んだのに強さが0なら、見えるところまで上げる
+    if(S.tintIdx > 0 && P.tint < 0.05){
+      P.tint = 0.5;
+      syncSliders();
+    }
+    saveSettingsSoon();
+  });
+}
+
+function syncSliders(){
+  ALL_PARAMS.forEach(d => {
+    const inp = document.getElementById('s_' + d.key);
+    if(inp){ inp.value = P[d.key]; document.getElementById('v_' + d.key).textContent = P[d.key].toFixed(2); }
+  });
+}
+
+function syncSwitches(){
+  document.getElementById('swMirror').classList.toggle('on', S.mirror);
+  document.getElementById('swAudio').classList.toggle('on', S.audio);
+  document.getElementById('swOsd').classList.toggle('on', S.osd);
+  document.getElementById('swAuto').classList.toggle('on', S.auto);
+}
+
+function bindSwitch(id, key, after){
+  document.getElementById(id).addEventListener('click', () => {
+    S[key] = !S[key];
+    syncSwitches();
+    saveSettingsSoon();
+    if(after) after();
+  });
+}
+
+/* ---------------- 設定の保存（次回起動時に復元） ---------------- */
+const LS_KEY = 'vhscam.settings.v1';
+let saveTimer = null;
+
+function saveSettingsSoon(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveSettings, 400);
+}
+function saveSettings(){
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      p: P, presetId: S.presetId, tintIdx: S.tintIdx, symIdx: S.symIdx,
+      mirror: S.mirror, audio: S.audio, speed: S.speed,
+      osd: S.osd, auto: S.auto, resolution: S.resolution
+    }));
+  }catch(e){ /* プライベートブラウズなどでは保存しない */ }
+}
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
+}
+
+/* ---------------- イベント ---------------- */
+document.getElementById('startBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('startBtn');
+  btn.textContent = '起動中…';
+  try{
+    initGL();
+    await startCamera();
+    S.running = true;
+    startTime = performance.now();
+    lastT = performance.now();
+    requestAnimationFrame(render);
+    document.getElementById('start').style.display = 'none';
+  }catch(err){
+    btn.textContent = 'もう一度試す';
+    showWarn(errorMessage(err));
+  }
+});
+
+document.getElementById('shutter').addEventListener('click', () => {
+  if(S.mode === 'photo'){ takePhoto(); return; }
+  if(recorder && recorder.state === 'recording') stopRec();
+  else startRec();
+});
+
+document.querySelectorAll('.mode').forEach(b => {
+  b.addEventListener('click', () => {
+    if(recorder && recorder.state === 'recording') return;
+    S.mode = b.dataset.mode;
+    document.querySelectorAll('.mode').forEach(x => x.classList.toggle('active', x === b));
+    document.getElementById('shutter').classList.toggle('photo', S.mode === 'photo');
+  });
+});
+
+document.getElementById('pauseBtn').addEventListener('click', togglePause);
+
+document.getElementById('speedSelect').addEventListener('change', async e => {
+  if(recorder && recorder.state !== 'inactive'){
+    e.target.value = String(S.speed);
+    toast('録画中は変更できません');
+    return;
+  }
+  const prev = S.speed;
+  S.speed = parseFloat(e.target.value);
+  updateSpeedBadge();
+  saveSettingsSoon();
+  // スローはカメラを60fpsで回したほうがなめらかになる
+  if((prev < 1) !== (S.speed < 1)){
+    try{ await startCamera(); }catch(err){ toast('カメラを再起動できませんでした'); }
+  }
+});
+
+function updateSpeedBadge(){
+  const el = document.getElementById('speedBadge');
+  el.textContent = S.speed + 'x';
+  el.classList.toggle('on', S.speed !== 1);
+  document.getElementById('speedVal').textContent = S.speed === 1 ? '' : (S.speed < 1 ? 'スロー' : '早回し');
+}
+
+/* 名前をつけて保存 */
+const nameModal = document.getElementById('nameModal');
+const nameInput = document.getElementById('nameInput');
+document.getElementById('savePresetBtn').addEventListener('click', () => {
+  const base = getPreset(S.presetId);
+  nameInput.value = '';
+  nameInput.placeholder = base ? `例：${base.name} 調整` : '例：夕方の散歩';
+  nameModal.classList.add('show');
+  setTimeout(() => nameInput.focus(), 60);
+});
+document.getElementById('nameCancel').addEventListener('click', () => nameModal.classList.remove('show'));
+document.getElementById('nameOk').addEventListener('click', commitName);
+nameInput.addEventListener('keydown', e => { if(e.key === 'Enter') commitName(); });
+function commitName(){
+  const name = nameInput.value.trim() || `マイ設定 ${MY.length + 1}`;
+  nameModal.classList.remove('show');
+  addMyPreset(name);
+}
+
+document.getElementById('flipBtn').addEventListener('click', flipCamera);
+document.getElementById('settingsBtn').addEventListener('click', () => {
+  document.getElementById('sheet').classList.add('open');
+});
+document.getElementById('sheetClose').addEventListener('click', () => {
+  document.getElementById('sheet').classList.remove('open');
+});
+document.getElementById('galleryBtn').addEventListener('click', () => {
+  if(!lastBlob){ toast('まだ撮影がありません'); return; }
+  document.getElementById('result').classList.add('show');
+});
+
+const gb = document.getElementById('glitchBtn');
+const holdOn  = e => { e.preventDefault(); S.hold = true;  gb.classList.add('hold'); };
+const holdOff = e => { e.preventDefault(); S.hold = false; gb.classList.remove('hold'); };
+gb.addEventListener('touchstart', holdOn, {passive:false});
+gb.addEventListener('touchend', holdOff);
+gb.addEventListener('touchcancel', holdOff);
+gb.addEventListener('mousedown', holdOn);
+window.addEventListener('mouseup', () => { S.hold = false; gb.classList.remove('hold'); });
+
+// プレビューをタップしても一瞬グリッチする
+outCanvas.addEventListener('pointerdown', () => {
+  S.burstUntil = performance.now() + 120 + Math.random() * 220;
+});
+
+bindSwitch('swMirror', 'mirror');
+bindSwitch('swOsd', 'osd');
+bindSwitch('swAuto', 'auto');
+bindSwitch('swAudio', 'audio', async () => {
+  if(recorder && recorder.state === 'recording') return;
+  try{ await startCamera(); }catch(e){ toast('カメラを再起動できませんでした'); }
+});
+
+document.getElementById('camSelect').addEventListener('change', async e => {
+  S.deviceId = e.target.value;
+  try{ await startCamera(); }catch(err){ toast('このカメラは使用できませんでした'); }
+});
+document.getElementById('resSelect').addEventListener('change', async e => {
+  if(recorder && recorder.state === 'recording'){ toast('録画中は変更できません'); return; }
+  S.resolution = +e.target.value;
+  saveSettingsSoon();
+  try{ await startCamera(); }catch(err){ toast('その解像度は使用できませんでした'); }
+});
+
+document.getElementById('shareBtn').addEventListener('click', shareResult);
+document.getElementById('dlBtn').addEventListener('click', downloadResult);
+document.getElementById('resultClose').addEventListener('click', () => {
+  document.getElementById('result').classList.remove('show');
+  const v = document.getElementById('resultMedia');
+  if(v && v.pause) v.pause();
+});
+
+document.addEventListener('visibilitychange', () => {
+  if(document.hidden){
+    if(recorder && recorder.state === 'recording') stopRec();
+  }else if(S.running){
+    video.play().catch(()=>{});
+  }
+});
+
+/* ---------------- 画面スリープ防止（録画中） ---------------- */
+let wakeLock = null;
+async function requestWakeLock(){
+  try{
+    if(navigator.wakeLock && !wakeLock){
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    }
+  }catch(e){ /* 非対応なら無視 */ }
+}
+function releaseWakeLock(){
+  if(wakeLock){ wakeLock.release().catch(()=>{}); wakeLock = null; }
+}
+
+/* ---------------- ユーティリティ ---------------- */
+function escapeHtml(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+let toastTimer;
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1900);
+}
+function showWarn(html){
+  const w = document.getElementById('startWarn');
+  w.innerHTML = html;
+  w.classList.add('show');
+}
+function errorMessage(err){
+  const n = err && err.name;
+  const code = `<br><span style="opacity:.7;font-size:11px">エラー種別：${escapeHtml(n || '不明')}</span>`;
+  if(n === 'NotAllowedError')
+    return 'カメラの使用が許可されませんでした。<br>Safariのアドレスバー左の「あぁ」→「Webサイトの設定」→ カメラを「許可」にしてから、ページを再読み込みしてください。' + code;
+  if(n === 'NotFoundError' || n === 'OverconstrainedError')
+    return '条件に合うカメラが見つかりませんでした。設定から解像度を下げて試してください。' + code;
+  if(n === 'NotReadableError' || n === 'AbortError')
+    return 'カメラを他のアプリ／他のタブが使用中です。<br>このアプリを2か所（Safariのタブとホーム画面のアプリなど）で同時に開いていないか、ビデオ通話などのアプリが起動していないか確認して、閉じてから再試行してください。' + code;
+  if(n === 'SecurityError')
+    return 'このページはカメラを使える状態で開かれていません。<code>https://</code> で始まるURLから開き直してください。' + code;
+  return 'カメラを起動できませんでした：' + (err && err.message ? escapeHtml(err.message) : '不明なエラー') + code;
+}
+
+/* ---------------- アプリ化（PWA） ---------------- */
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.matchMedia('(display-mode: fullscreen)').matches ||
+         navigator.standalone === true;
+}
+
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  installPrompt = e;
+  showInstallHint();
+});
+window.addEventListener('appinstalled', () => {
+  installPrompt = null;
+  document.getElementById('installHint').classList.remove('show');
+});
+
+function showInstallHint(){
+  const el = document.getElementById('installHint');
+  if(isStandalone()) return;                       // すでにアプリとして起動中
+
+  const ua  = navigator.userAgent;
+  const iOS = /iPad|iPhone|iPod/.test(ua) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if(installPrompt){
+    el.innerHTML = `<b>アプリとして使う</b><br>
+      ホーム画面／アプリ一覧に追加すると、ブラウザのバーなしで全画面起動します。
+      <br><button id="installBtn">アプリとしてインストール</button>`;
+    el.classList.add('show');
+    document.getElementById('installBtn').addEventListener('click', async () => {
+      if(!installPrompt) return;
+      installPrompt.prompt();
+      await installPrompt.userChoice.catch(()=>{});
+      installPrompt = null;
+      el.classList.remove('show');
+    });
+  }else if(iOS){
+    el.innerHTML = `<b>アプリとして使う</b><br>
+      Safariの共有ボタン <span class="share-ico">⬆</span> →
+      <b>「ホーム画面に追加」</b> でアプリになります。<br>
+      アイコンから起動するとSafariのバーが消えて全画面になり、次回以降はオフラインでも動きます。`;
+    el.classList.add('show');
+  }
+}
+
+function registerSW(){
+  if(!('serviceWorker' in navigator)) return;
+  if(location.protocol !== 'https:' && !['localhost','127.0.0.1'].includes(location.hostname)) return;
+  navigator.serviceWorker.register('./sw.js').catch(() => { /* 失敗しても通常動作 */ });
+}
+
+/* ---------------- 初期化 ---------------- */
+(function init(){
+  const saved = loadSettings();
+
+  MY = loadMyPresets();
+  buildPresets();
+
+  // 保存済みのプリセット（古い形式の数値にも対応）
+  let startId = S.presetId;
+  if(saved){
+    if(typeof saved.presetId === 'string' && getPreset(saved.presetId)) startId = saved.presetId;
+    else if(typeof saved.preset === 'number' && PRESETS[saved.preset]) startId = 'b:' + saved.preset;
+  }
+  applyPreset(startId);
+
+  if(saved){
+    if(saved.p) ALL_PARAMS.forEach(d => {
+      if(typeof saved.p[d.key] === 'number') P[d.key] = saved.p[d.key];
+    });
+    ['mirror','audio','osd','auto'].forEach(k => {
+      if(typeof saved[k] === 'boolean') S[k] = saved[k];
+    });
+    if(typeof saved.tintIdx === 'number' && TINTS[saved.tintIdx]) S.tintIdx = saved.tintIdx;
+    if(typeof saved.symIdx  === 'number' && SYMS[saved.symIdx])   S.symIdx  = saved.symIdx;
+    if([0.25,0.5,1,2,4].includes(saved.speed)) S.speed = saved.speed;
+    if([480,720,1080].includes(saved.resolution)){
+      S.resolution = saved.resolution;
+      document.getElementById('resSelect').value = String(saved.resolution);
+    }
+  }
+  buildSliders();
+  buildMyList();
+  syncSliders();
+  syncSwitches();
+  document.getElementById('speedSelect').value = String(S.speed);
+  updateSpeedBadge();
+
+  const secure = location.protocol === 'https:' ||
+                 ['localhost','127.0.0.1'].includes(location.hostname) ||
+                 location.protocol === 'file:';
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    showWarn('この環境ではカメラAPIが使えません。Safari / Chrome の最新版で開いてください。');
+  }else if(!secure){
+    showWarn('カメラを使うには <b>https://</b> でアクセスする必要があります。GitHub Pages などのHTTPS配信で開いてください。');
+  }
+
+  if(isStandalone()) document.getElementById('startNote').style.display = 'none';
+  showInstallHint();
+  registerSW();
+})();
+</script>
 </body>
 </html>
