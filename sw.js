@@ -1,14 +1,13 @@
-/* VHS / GLITCH CAM — Service Worker
+/* ゆめテープ / YUMETAPE — Service Worker
    アプリ本体をキャッシュして、機内モードでも起動できるようにする。
    本体を更新したら CACHE のバージョンを上げること。 */
 
-const CACHE   = 'vhscam-v3';
-const RUNTIME = 'vhscam-runtime-v3';
+const CACHE   = 'yumetape-v1';
+const RUNTIME = 'yumetape-runtime-v1';
 
 const SHELL = [
   './',
   './index.html',
-  './vhs-glitch-cam.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -76,7 +75,7 @@ async function staleWhileRevalidate(req, cacheName) {
 
   // オフラインでナビゲーションに失敗したらアプリ本体を返す
   if (req.mode === 'navigate') {
-    const fallback = await cache.match('./vhs-glitch-cam.html');
+    const fallback = await cache.match('./index.html');
     if (fallback) return fallback;
   }
   return new Response('オフラインです', {status: 503, headers: {'Content-Type': 'text/plain; charset=utf-8'}});
