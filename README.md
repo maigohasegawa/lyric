@@ -4,8 +4,10 @@
 
 | ファイル | 内容 |
 |---|---|
+| `index.html` | 2つのツールへのランチャー |
 | `lyric-layer-tool_1.html` | LAYER SONG — 1曲の歌詞を3トラックに分解し、重ねると元の歌詞に戻るギミック曲を作るツール |
-| `vhs-glitch-cam.html` | VHS / GLITCH CAM — カメラ映像にVHS風エフェクトとグリッチをリアルタイムで乗せて撮影するツール |
+| `vhs-glitch-cam.html` | VHS / GLITCH CAM — カメラ映像にVHS風エフェクトとグリッチをリアルタイムで乗せて撮影するツール（PWA） |
+| `manifest.webmanifest` / `sw.js` / `icons/` | VHS / GLITCH CAM をアプリとして使うためのPWA一式 |
 
 ---
 
@@ -41,8 +43,33 @@ VHS系はクロマブリード（YIQ色空間で色差信号だけ横に引き�
 `getUserMedia` はHTTPSでしか動きません。GitHub Pagesで配信するのが手軽です。
 
 1. リポジトリの Settings → Pages → Source を `main` ブランチのルートに設定
-2. `https://<ユーザー名>.github.io/lyric/vhs-glitch-cam.html` をiPhoneのSafariで開く
-3. 共有ボタン →「ホーム画面に追加」でアプリのように起動できます
+2. `https://<ユーザー名>.github.io/lyric/` を開くとランチャー、
+   `https://<ユーザー名>.github.io/lyric/vhs-glitch-cam.html` がカメラ本体
+
+### アプリとして使う（PWA）
+
+このツールはPWAとして作ってあるので、ホーム画面に追加すると **ブラウザのバーが消えて全画面のアプリになります**。App Store も Xcode も不要です。
+
+**iPhone / iPad**
+
+1. Safariで `vhs-glitch-cam.html` を開く
+2. 共有ボタン（□に↑）→ **「ホーム画面に追加」**
+3. 追加されたアイコンから起動する
+
+アイコンから起動すると次のようになります。
+
+- Safariのアドレスバー・ツールバーが消えて全画面
+- 起動時にVHSカセットのアプリアイコンとスプラッシュ（黒背景）
+- Service Workerが本体をキャッシュするので、**2回目以降は機内モード・電波なしでも起動**
+- エフェクト設定（プリセット・各スライダー・ミラー・音声・OSD）は端末に保存され、次回起動時に復元
+
+**Android / PC（Chrome・Edge）**
+
+起動画面に「アプリとしてインストール」ボタンが出るので、それを押せばインストールされます。
+
+> ホーム画面に追加した直後は、カメラの使用許可をもう一度聞かれます（Safariとは別のアプリ扱いになるため）。
+
+> **更新時の注意**：`vhs-glitch-cam.html` を編集したら、`sw.js` の `CACHE` の値（`vhscam-v1`）を上げてください。古いキャッシュが残ったままになるのを防げます。
 
 ### 動作要件・注意
 

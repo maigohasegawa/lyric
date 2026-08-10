@@ -6,7 +6,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#0b0b10">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VHS CAM">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="./icons/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -248,7 +253,7 @@
   }
   #startNote{
     margin-top:22px;color:var(--muted);font-size:11.5px;line-height:1.9;max-width:430px;
-    font-family:'JetBrains Mono',monospace;
+    font-family:'JetBrains Mono',monospace;text-align:left;
   }
   .warn{
     margin-top:18px;padding:12px 14px;border-radius:10px;
@@ -257,6 +262,22 @@
     display:none;
   }
   .warn.show{display:block;}
+  .install{
+    margin-top:20px;padding:13px 16px;border-radius:12px;
+    border:1px solid rgba(18,194,214,.35);background:rgba(18,194,214,.07);
+    color:var(--text);font-size:12.5px;line-height:1.9;max-width:430px;text-align:left;
+    display:none;
+  }
+  .install.show{display:block;}
+  .install b{color:var(--a);}
+  .install .share-ico{
+    display:inline-block;border:1px solid var(--a);border-radius:5px;
+    padding:0 5px;color:var(--a);font-size:11px;line-height:17px;
+  }
+  .install button{
+    margin-top:10px;background:var(--a);color:#052227;
+    font-size:13px;font-weight:900;padding:11px 20px;border-radius:22px;
+  }
 
   /* ---------- RESULT ---------- */
   #result{
@@ -369,6 +390,7 @@
   <p>iPhoneのカメラ映像に、VHSっぽい色にじみ・走査線・トラッキングノイズと、デジタルグリッチをリアルタイムで乗せて撮影します。写真も動画も、エフェクトが焼き込まれた状態で保存されます。</p>
   <button id="startBtn">カメラを起動する</button>
   <div class="warn" id="startWarn"></div>
+  <div class="install" id="installHint"></div>
   <div id="startNote">
     ・初回は「カメラへのアクセス」を許可してください<br>
     ・Safari推奨（iOS 17以降で動画はMP4保存）<br>
@@ -1061,6 +1083,7 @@ function applyPreset(i){
   document.querySelectorAll('.preset').forEach((b,j) => b.classList.toggle('active', j===i));
   document.getElementById('presetBadge').textContent = PRESETS[i].name;
   syncSliders();
+  saveSettingsSoon();
 }
 
 function buildSliders(){
@@ -1076,6 +1099,7 @@ function buildSliders(){
       inp.addEventListener('input', () => {
         P[d.key] = parseFloat(inp.value);
         document.getElementById('v_' + d.key).textContent = P[d.key].toFixed(2);
+        saveSettingsSoon();
       });
     });
   };
@@ -1102,8 +1126,32 @@ function bindSwitch(id, key, after){
   document.getElementById(id).addEventListener('click', () => {
     S[key] = !S[key];
     syncSwitches();
+    saveSettingsSoon();
     if(after) after();
   });
+}
+
+/* ---------------- 設定の保存（次回起動時に復元） ---------------- */
+const LS_KEY = 'vhscam.settings.v1';
+let saveTimer = null;
+
+function saveSettingsSoon(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveSettings, 400);
+}
+function saveSettings(){
+  try{
+    localStorage.setItem(LS_KEY, JSON.stringify({
+      p: P, preset: S.preset, mirror: S.mirror, audio: S.audio,
+      osd: S.osd, auto: S.auto, resolution: S.resolution
+    }));
+  }catch(e){ /* プライベートブラウズなどでは保存しない */ }
+}
+function loadSettings(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  }catch(e){ return null; }
 }
 
 /* ---------------- イベント ---------------- */
@@ -1180,6 +1228,7 @@ document.getElementById('camSelect').addEventListener('change', async e => {
 document.getElementById('resSelect').addEventListener('change', async e => {
   if(recorder && recorder.state === 'recording'){ toast('録画中は変更できません'); return; }
   S.resolution = +e.target.value;
+  saveSettingsSoon();
   try{ await startCamera(); }catch(err){ toast('その解像度は使用できませんでした'); }
 });
 
@@ -1241,11 +1290,79 @@ function errorMessage(err){
   return 'カメラを起動できませんでした：' + (err && err.message ? escapeHtml(err.message) : '不明なエラー');
 }
 
+/* ---------------- アプリ化（PWA） ---------------- */
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         window.matchMedia('(display-mode: fullscreen)').matches ||
+         navigator.standalone === true;
+}
+
+let installPrompt = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  installPrompt = e;
+  showInstallHint();
+});
+window.addEventListener('appinstalled', () => {
+  installPrompt = null;
+  document.getElementById('installHint').classList.remove('show');
+});
+
+function showInstallHint(){
+  const el = document.getElementById('installHint');
+  if(isStandalone()) return;                       // すでにアプリとして起動中
+
+  const ua  = navigator.userAgent;
+  const iOS = /iPad|iPhone|iPod/.test(ua) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  if(installPrompt){
+    el.innerHTML = `<b>アプリとして使う</b><br>
+      ホーム画面／アプリ一覧に追加すると、ブラウザのバーなしで全画面起動します。
+      <br><button id="installBtn">アプリとしてインストール</button>`;
+    el.classList.add('show');
+    document.getElementById('installBtn').addEventListener('click', async () => {
+      if(!installPrompt) return;
+      installPrompt.prompt();
+      await installPrompt.userChoice.catch(()=>{});
+      installPrompt = null;
+      el.classList.remove('show');
+    });
+  }else if(iOS){
+    el.innerHTML = `<b>アプリとして使う</b><br>
+      Safariの共有ボタン <span class="share-ico">⬆</span> →
+      <b>「ホーム画面に追加」</b> でアプリになります。<br>
+      アイコンから起動するとSafariのバーが消えて全画面になり、次回以降はオフラインでも動きます。`;
+    el.classList.add('show');
+  }
+}
+
+function registerSW(){
+  if(!('serviceWorker' in navigator)) return;
+  if(location.protocol !== 'https:' && !['localhost','127.0.0.1'].includes(location.hostname)) return;
+  navigator.serviceWorker.register('./sw.js').catch(() => { /* 失敗しても通常動作 */ });
+}
+
 /* ---------------- 初期化 ---------------- */
 (function init(){
+  const saved = loadSettings();
+
   buildPresets();
-  applyPreset(S.preset);
+  applyPreset(saved && typeof saved.preset === 'number' ? saved.preset : S.preset);
+  if(saved){
+    if(saved.p) ALL_PARAMS.forEach(d => {
+      if(typeof saved.p[d.key] === 'number') P[d.key] = saved.p[d.key];
+    });
+    ['mirror','audio','osd','auto'].forEach(k => {
+      if(typeof saved[k] === 'boolean') S[k] = saved[k];
+    });
+    if([480,720,1080].includes(saved.resolution)){
+      S.resolution = saved.resolution;
+      document.getElementById('resSelect').value = String(saved.resolution);
+    }
+  }
   buildSliders();
+  syncSliders();
   syncSwitches();
 
   const secure = location.protocol === 'https:' ||
@@ -1256,6 +1373,10 @@ function errorMessage(err){
   }else if(!secure){
     showWarn('カメラを使うには <b>https://</b> でアクセスする必要があります。GitHub Pages などのHTTPS配信で開いてください。');
   }
+
+  if(isStandalone()) document.getElementById('startNote').style.display = 'none';
+  showInstallHint();
+  registerSW();
 })();
 </script>
 </body>
