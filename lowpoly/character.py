@@ -31,7 +31,7 @@ from png import Canvas
 SPEC = {
     "name": "heki",
     "height": 1.0,
-    "heads": 5.0,           # 資料は 4.5 頭身寄りだが、指定どおり 5 で組む
+    "heads": 4.6,           # 資料の頭の大きさに合わせた（指定は 5 だった）
 
     # 配色（sRGB 表記。マテリアル用にリニアへ変換される）
     "skin":       "#eff2f5",   # 冷え症で青白い
@@ -63,10 +63,10 @@ SPEC = {
     "arm_forward": 0.06,
 
     # 髪（ボブ）
-    "hair_flare": 1.34,     # 毛先の広がり
-    "hair_bottom": -1.05,   # 毛先の高さ（head_ry 比、頭の中心から）
+    "hair_flare": 1.30,     # 一番張るところの広がり
+    "hair_bottom": -1.85,   # 毛先の高さ（head_ry 比、頭の中心から）
     "bang_line": 0.14,      # 前髪の下端（head_ry 比）
-    "face_window": 0.62,    # 顔の窓の幅（head_rx 比）
+    "face_window": 0.52,    # 顔の窓の幅（head_rx 比）
     "head_dots": 5,
 
     # 服
@@ -264,15 +264,21 @@ def build(spec: dict = SPEC) -> list[Part]:
 
 
 def _build_hair(hair: Part, dots: Part, spec: dict, head_c, radii, u: float) -> None:
-    """ぱっつん前髪のボブ。頭を覆う釣鐘を作ってから顔の窓を抜く。"""
+    """ぱっつん前髪のボブ。頭を覆う殻を作ってから顔の窓を抜く。
+
+    毛先は外に開かず、頬を包むように内へ入れる（資料の輪郭はここで決まる）。
+    """
     rx, ry, rz = radii
-    # (高さ, x 半径倍率, z 半径倍率) を上から下へ
+    # (高さ, x 半径倍率, z 半径倍率) を上から下へ。目の高さで一番張り、
+    # そこから下は内側へ絞る
     profile = [
-        (1.03, 0.26, 0.26), (0.86, 0.74, 0.76), (0.55, 1.00, 1.02),
-        (0.15, 1.14, 1.16), (-0.35, 1.24, 1.24),
-        (spec["hair_bottom"] + 0.18, spec["hair_flare"] * 0.97,
-         spec["hair_flare"] * 0.96),
-        (spec["hair_bottom"], spec["hair_flare"], spec["hair_flare"] * 0.98),
+        (1.05, 0.30, 0.30), (0.88, 0.78, 0.80), (0.58, 1.04, 1.06),
+        (0.22, 1.16, 1.18), (-0.16, spec["hair_flare"], spec["hair_flare"] * 1.00),
+        (-0.55, spec["hair_flare"] * 0.96, spec["hair_flare"] * 0.94),
+        (spec["hair_bottom"] + 0.22, spec["hair_flare"] * 0.84,
+         spec["hair_flare"] * 0.82),
+        (spec["hair_bottom"], spec["hair_flare"] * 0.62,
+         spec["hair_flare"] * 0.64),
     ]
     bell = Part(hair.color, name="tmp")
     loft(bell, [(head_c[1] + ry * fy, rx * fx, rz * fz)
@@ -288,6 +294,18 @@ def _build_hair(hair: Part, dots: Part, spec: dict, head_c, radii, u: float) -> 
 
     filter_tris(bell, keeps)
     hair.merge(bell)
+
+    # 頬にかかる前の房。顔の窓の左右を縁取って輪郭を締める
+    for side in (1, -1):
+        for dz, length, w in [(0.66, 1.85, 0.26), (0.20, 2.05, 0.30)]:
+            lock = Part(hair.color, name="tmp")
+            loft(lock, [(-ry * length, rx * w * 0.30, rz * w * 0.34),
+                        (-ry * length * 0.55, rx * w * 0.86, rz * w * 0.92),
+                        (ry * 0.30, rx * w, rz * w * 1.05)], sides=5)
+            hair.merge(lock.transform(
+                offset=(side * rx * (spec["face_window"] + 0.30),
+                        head_c[1] + ry * 0.30, head_c[2] + rz * dz * 0.72),
+                roll=side * 0.10))
 
     # 頭頂に並ぶ青い点（地図の経路のような並び）
     n = spec["head_dots"]
@@ -320,13 +338,23 @@ def _build_pants(pants: Part, spec: dict, u: float, y: dict) -> list[Part]:
 
     r_thigh = spec["hip_half"] * u * 0.62
     for side in (1, -1):
+        # 脚そのものは上から下までほぼ同じ太さ。細らせると円錐に見える
         leg = Part(pants.color, name="tmp")
-        loft(leg, [(hem - 0.012 * u, r_thigh * flare * 1.10, r_thigh * flare * 1.34),
-                   (hem + 0.10 * u, r_thigh * flare * 0.94, r_thigh * flare * 1.02),
-                   (y["knee"], r_thigh * 1.80, r_thigh * 1.80),
-                   (y["crotch"] + 0.02 * u, r_thigh * 1.55, r_thigh * 1.55)],
-             sides=9, cap_top=False)
+        loft(leg, [(hem + 0.16 * u, r_thigh * 1.72, r_thigh * 1.72),
+                   (y["knee"], r_thigh * 1.78, r_thigh * 1.80),
+                   (y["crotch"] + 0.02 * u, r_thigh * 1.62, r_thigh * 1.62)],
+             sides=9, cap_top=False, cap_bottom=False)
         pants.merge(leg.transform(offset=(side * leg_x, 0.0, 0.0)))
+
+        # 裾は地面でたまって横に広がる。前後に長く、少し不揃いにする
+        pool = Part(pants.color, name="tmp")
+        loft(pool, [(hem - 0.02 * u, r_thigh * flare * 1.02,
+                     r_thigh * flare * 1.46),
+                    (hem + 0.06 * u, r_thigh * flare * 1.10,
+                     r_thigh * flare * 1.34),
+                    (hem + 0.17 * u, r_thigh * 1.74, r_thigh * 1.86)],
+             sides=9, cap_top=False, twist=0.10)
+        pants.merge(pool.transform(offset=(side * leg_x, 0.0, 0.02 * u)))
 
     # 継ぎあて。脚の表面に沿って少し浮かせた板を貼る。
     # 色ごとに Part をまとめる（pants に merge すると色が落ちてしまう）
@@ -378,15 +406,29 @@ def _build_luggage(spec: dict, u: float, y: dict) -> list[Part]:
         """パックの大きさを 1 とした相対座標を絶対座標に直す。"""
         return (cx_ + fx * pw, cy_ + fy * ph, cz_ + fz * pd)
 
-    # 本体は塊を 3 つ重ねて、縫い合わせたような不整形にする
-    for i, (fx, fy, fz, r) in enumerate([(0.00, -0.05, 0.00, 0.94),
-                                         (-0.44, 0.34, 0.12, 0.64),
-                                         (0.46, 0.30, 0.06, 0.60),
-                                         (0.02, 0.54, -0.20, 0.56)]):
+    # 本体。滑らかな球ひとつだと「イモ」に見えるので、角ばった塊と
+    # 角度をつけた箱を積み、物が個別に見える山にする
+    for i, (fx, fy, fz, r) in enumerate([(-0.16, -0.14, 0.02, 0.80),
+                                         (0.30, -0.06, -0.08, 0.62),
+                                         (-0.46, 0.36, 0.14, 0.54),
+                                         (0.44, 0.34, 0.04, 0.50),
+                                         (0.00, 0.58, -0.18, 0.46)]):
         blob = Part(pack.color, name="tmp")
-        icosphere(blob, subdiv=1, radius=1.0, jitter=0.15, seed=5 + i)
+        icosphere(blob, subdiv=0, radius=1.0, jitter=0.30, seed=5 + i)
         pack.merge(blob.scale_xyz(pw * r, ph * r, pd * r).transform(
-            offset=at(fx, fy, fz)))
+            offset=at(fx, fy, fz), rot_y=i * 0.7))
+
+    # 積んだ荷物（黄色い袋や箱）。傾けて置くと積み上げた感じが出る
+    bundles = new("#f0cf4a", "bundles")
+    for fx, fy, fz, sx, sy, sz, tw, tl in [
+            (-0.58, -0.30, 0.30, 0.34, 0.28, 0.30, 0.26, -0.12),
+            (0.60, -0.24, 0.26, 0.30, 0.32, 0.28, -0.20, 0.14),
+            (0.06, 0.26, 0.40, 0.40, 0.24, 0.22, 0.10, -0.18),
+            (-0.30, 0.62, 0.10, 0.26, 0.22, 0.24, -0.30, 0.20),
+            (0.36, 0.66, -0.10, 0.24, 0.20, 0.22, 0.34, 0.10)]:
+        bag = Part(bundles.color, name="tmp")
+        box(bag, -sx * pw, -sy * ph, -sz * pd, sx * pw, sy * ph, sz * pd)
+        bundles.merge(bag.transform(offset=at(fx, fy, fz), roll=tw, tilt=tl))
 
     # 肩ストラップ
     for side in (1, -1):
