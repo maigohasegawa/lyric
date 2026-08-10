@@ -294,6 +294,10 @@
     margin-top:22px;color:var(--muted);font-size:11.5px;line-height:1.9;max-width:430px;
     font-family:'JetBrains Mono',monospace;text-align:left;
   }
+  #startLinks{
+    margin-top:20px;color:#5c5e6d;font-size:11px;line-height:1.9;max-width:430px;
+  }
+  #startLinks a{color:#8d8fa0;}
   .warn{
     margin-top:18px;padding:12px 14px;border-radius:10px;
     border:1px solid rgba(242,183,5,.4);background:rgba(242,183,5,.08);
@@ -518,6 +522,10 @@
     ・Safari推奨（iOS 17以降で動画はMP4保存）<br>
     ・保存した動画は共有ボタンから「ビデオを保存」で写真アプリへ<br>
     ・GLITCHボタンは押している間だけ暴れます／画面タップでも一瞬グリッチ
+  </div>
+  <div id="startLinks">
+    映像はすべて端末の中で処理され、どこにも送信されません
+    ・<a href="./privacy.html">プライバシーについて</a>
   </div>
 </div>
 
@@ -1663,6 +1671,13 @@ function showResult(blob, kind){
 
 async function shareResult(){
   if(!lastBlob) return;
+
+  // iOSアプリ版（Capacitor）ではネイティブの共有シートを使う
+  if(NATIVE){
+    try{ await shareNative(); return; }
+    catch(e){ toast('共有できませんでした'); return; }
+  }
+
   const file = new File([lastBlob], lastName, {type: lastBlob.type});
   if(navigator.canShare && navigator.canShare({files:[file]})){
     try{ await navigator.share({files:[file]}); }
@@ -1671,6 +1686,31 @@ async function shareResult(){
     downloadResult();
     toast('共有に非対応のためダウンロードしました');
   }
+}
+
+/* ---------------- iOSアプリ版（Capacitor）用 ----------------
+   ウェブ版では NATIVE が false になり、この経路は一切通らない。 */
+const NATIVE = !!(window.Capacitor && window.Capacitor.isNativePlatform
+                  && window.Capacitor.isNativePlatform());
+
+function blobToBase64(blob){
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(String(r.result).split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(blob);
+  });
+}
+
+async function shareNative(){
+  const {Filesystem, Share} = window.Capacitor.Plugins;
+  const data = await blobToBase64(lastBlob);
+  const written = await Filesystem.writeFile({
+    path: lastName,
+    data,
+    directory: 'CACHE'
+  });
+  await Share.share({files: [written.uri]});
 }
 
 function downloadResult(){
@@ -2078,6 +2118,7 @@ window.addEventListener('appinstalled', () => {
 
 function showInstallHint(){
   const el = document.getElementById('installHint');
+  if(NATIVE) return;                               // アプリ版では不要
   if(isStandalone()) return;                       // すでにアプリとして起動中
 
   const ua  = navigator.userAgent;
@@ -2106,6 +2147,7 @@ function showInstallHint(){
 }
 
 function registerSW(){
+  if(NATIVE) return;                               // アプリ版は端末内のファイルを直接読む
   if(!('serviceWorker' in navigator)) return;
   if(location.protocol !== 'https:' && !['localhost','127.0.0.1'].includes(location.hostname)) return;
   navigator.serviceWorker.register('./sw.js').catch(() => { /* 失敗しても通常動作 */ });
@@ -2157,7 +2199,7 @@ function registerSW(){
     showWarn('カメラを使うには <b>https://</b> でアクセスする必要があります。GitHub Pages などのHTTPS配信で開いてください。');
   }
 
-  if(isStandalone()) document.getElementById('startNote').style.display = 'none';
+  if(isStandalone() || NATIVE) document.getElementById('startNote').style.display = 'none';
   showInstallHint();
   registerSW();
 })();

@@ -2,12 +2,13 @@
    アプリ本体をキャッシュして、機内モードでも起動できるようにする。
    本体を更新したら CACHE のバージョンを上げること。 */
 
-const CACHE   = 'yumetape-v1';
-const RUNTIME = 'yumetape-runtime-v1';
+const CACHE   = 'yumetape-v2';
+const RUNTIME = 'yumetape-runtime-v2';
 
 const SHELL = [
   './',
   './index.html',
+  './privacy.html',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
