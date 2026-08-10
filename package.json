@@ -1,0 +1,11 @@
+{
+  "name": "yumetape",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ゆめテープ / YUMETAPE — iOSアプリ版のビルド設定（ウェブ版はこれ無しで動きます）",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-www.mjs",
+    "ios": "npm run build && npx cap sync ios && npx cap open ios"
+  }
+}
