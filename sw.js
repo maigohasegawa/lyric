@@ -2,8 +2,8 @@
    アプリ本体をキャッシュして、機内モードでも起動できるようにする。
    本体を更新したら CACHE のバージョンを上げること。 */
 
-const CACHE   = 'vhscam-v2';
-const RUNTIME = 'vhscam-runtime-v2';
+const CACHE   = 'vhscam-v3';
+const RUNTIME = 'vhscam-runtime-v3';
 
 const SHELL = [
   './',
