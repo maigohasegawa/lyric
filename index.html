@@ -187,6 +187,11 @@
     color:var(--muted);padding:5px 12px;border-radius:14px;
   }
   .mode.active{color:var(--text);background:rgba(255,255,255,.1);}
+  .mode-sep{width:1px;height:14px;background:var(--line);align-self:center;margin:0 4px;}
+  #importBtn{border:1px solid var(--line);}
+  #importBtn.on{color:var(--c);border-color:rgba(242,183,5,.5);}
+  #srcBadge{display:none;max-width:44vw;overflow:hidden;text-overflow:ellipsis;}
+  #srcBadge.on{display:flex;}
 
   /* ---------- SHEET ---------- */
   .sheet{
@@ -413,6 +418,7 @@
 <div id="topbar">
   <div class="badge" id="recBadge"><span class="recdot"></span><span id="recTime">0:00</span></div>
   <div class="badge" id="cutBadge">CUT 1</div>
+  <div class="badge" id="srcBadge">読み込み</div>
   <div class="badge" id="presetBadge">VHS 1984</div>
   <div class="badge" id="speedBadge">0.5x</div>
   <div class="badge" id="fps">-- FPS</div>
@@ -423,7 +429,10 @@
   <div id="modeRow">
     <button class="mode active" data-mode="video">VIDEO</button>
     <button class="mode" data-mode="photo">PHOTO</button>
+    <span class="mode-sep"></span>
+    <button class="mode" id="importBtn">読み込み</button>
   </div>
+  <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
   <div id="buttons">
     <button class="side-btn small" id="settingsBtn" aria-label="設定">⚙</button>
     <button class="side-btn small" id="pauseBtn" aria-label="録画を一時停止">‖</button>
@@ -1146,7 +1155,14 @@ function render(now){
   if(!S.running) return;
   requestAnimationFrame(render);
 
-  if(video.readyState < 2 || !video.videoWidth) return;
+  // 映像のもと：カメラ／読み込んだ動画（どちらも video 要素）か、読み込んだ写真
+  const isStill = (srcKind === 'image');
+  const srcEl = isStill ? imgCanvas : video;
+  if(isStill){
+    if(!imgCanvas) return;
+  }else{
+    if(video.readyState < 2 || !video.videoWidth) return;
+  }
 
   const dt = (now - lastT) / 1000;
   lastT = now;
@@ -1156,16 +1172,20 @@ function render(now){
     fpsAcc = 0; fpsN = 0;
   }
 
-  const w = video.videoWidth, h = video.videoHeight;
+  const w = isStill ? imgCanvas.width  : video.videoWidth;
+  const h = isStill ? imgCanvas.height : video.videoHeight;
   resizeTargets(w, h);
 
   S.frame++;
-  // コマ落ち：stutter に応じて映像の取り込みを間引く
+  // コマ落ち：stutter に応じて映像の取り込みを間引く。
+  // 写真は中身が変わらないので、一度だけ転送すればいい
   const skip = Math.round(P.stutter * 4);
-  if(skip === 0 || S.frame % (skip + 1) === 0){
+  const needUpload = isStill ? stillDirty : (skip === 0 || S.frame % (skip + 1) === 0);
+  if(needUpload){
     gl.bindTexture(gl.TEXTURE_2D, videoTex);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, srcEl);
+    stillDirty = false;
   }
 
   const e = effective();
@@ -1295,10 +1315,136 @@ function chroma(text, x, y, color, s){
   octx.fillStyle = color;                octx.fillText(text, x, y);
 }
 
+/* ---------------- 映像のもと（カメラ / 読み込んだファイル） ---------------- */
+let srcKind = 'camera';      // 'camera' | 'video' | 'image'
+let imgCanvas = null;        // 読み込んだ写真（GLに渡せるようキャンバス化したもの）
+let stillDirty = false;      // 写真をGLに転送し直す必要があるか
+let fileUrl = null;          // 読み込んだ動画のURL
+let fileAudio = null;        // 読み込んだ動画の音声（録画に混ぜる用）
+
+const MAX_STILL = 2048;      // これを超える写真は縮める（GLのテクスチャ上限と速度のため）
+
+async function importFile(file){
+  if(!file) return;
+  const isVideo = /^video\//.test(file.type) || /\.(mp4|mov|m4v|webm)$/i.test(file.name);
+  releaseFile();
+
+  S.mirror = false;                       // 読み込んだ素材は反転しない
+  syncSwitches();
+
+  try{
+    if(isVideo){
+      await loadFileVideo(file);
+    }else{
+      await loadFileImage(file);
+    }
+  }catch(e){
+    toast('この形式は読み込めませんでした');
+    await backToCamera();
+    return;
+  }
+
+  document.getElementById('srcBadge').textContent =
+    (srcKind === 'image' ? '写真' : '動画') + '：' + file.name;
+  document.getElementById('srcBadge').classList.add('on');
+  const ib = document.getElementById('importBtn');
+  ib.textContent = 'カメラへ戻る';
+  ib.classList.add('on');
+}
+
+async function loadFileVideo(file){
+  stopStream();                            // カメラを止めて同じ video 要素を使い回す
+  fileUrl = URL.createObjectURL(file);
+  video.srcObject = null;
+  video.src = fileUrl;
+  video.loop = true;
+  video.muted = false;
+  video.load();
+  await new Promise((res, rej) => {
+    video.onloadedmetadata = res;
+    video.onerror = () => rej(new Error('decode'));
+    setTimeout(() => rej(new Error('timeout')), 15000);
+  });
+  srcKind = 'video';
+  imgCanvas = null;
+  await video.play().catch(()=>{});
+}
+
+async function loadFileImage(file){
+  stopStream();
+  let bmp = null;
+  try{
+    bmp = await createImageBitmap(file, {imageOrientation:'from-image'});
+  }catch(e){
+    // createImageBitmap が使えない環境向け
+    bmp = await new Promise((res, rej) => {
+      const im = new Image();
+      im.onload = () => res(im);
+      im.onerror = rej;
+      im.src = URL.createObjectURL(file);
+    });
+  }
+  const iw = bmp.width || bmp.naturalWidth;
+  const ih = bmp.height || bmp.naturalHeight;
+  if(!iw || !ih) throw new Error('size');
+
+  const k = Math.min(1, MAX_STILL / Math.max(iw, ih));
+  imgCanvas = document.createElement('canvas');
+  imgCanvas.width  = Math.max(2, Math.round(iw * k));
+  imgCanvas.height = Math.max(2, Math.round(ih * k));
+  imgCanvas.getContext('2d', {alpha:false}).drawImage(bmp, 0, 0, imgCanvas.width, imgCanvas.height);
+  if(bmp.close) bmp.close();
+
+  srcKind = 'image';
+  stillDirty = true;
+  video.pause();
+}
+
+function releaseFile(){
+  if(fileUrl){ URL.revokeObjectURL(fileUrl); fileUrl = null; }
+  imgCanvas = null;
+}
+
+async function backToCamera(){
+  if(recorder && recorder.state !== 'inactive') stopRec();
+  releaseFile();
+  srcKind = 'camera';
+  video.removeAttribute('src');
+  video.muted = true;
+  video.loop = false;
+  video.load();
+  document.getElementById('srcBadge').classList.remove('on');
+  const ib = document.getElementById('importBtn');
+  ib.textContent = '読み込み';
+  ib.classList.remove('on');
+  S.mirror = (S.facing === 'user');
+  syncSwitches();
+  try{ await startCamera(); }catch(e){ toast('カメラに戻れませんでした'); }
+}
+
+/* 読み込んだ動画の音声を録画に混ぜるための配線（1回だけ作る） */
+function fileAudioTracks(){
+  if(srcKind !== 'video' || !S.audio) return [];
+  try{
+    if(!fileAudio){
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new Ctx();
+      const node = ctx.createMediaElementSource(video);
+      const dest = ctx.createMediaStreamDestination();
+      node.connect(ctx.destination);      // 端末のスピーカーにも流す
+      node.connect(dest);                 // 録画にも流す
+      fileAudio = {ctx, dest};
+    }
+    if(fileAudio.ctx.state === 'suspended') fileAudio.ctx.resume().catch(()=>{});
+    return fileAudio.dest.stream.getAudioTracks();
+  }catch(e){ return []; }
+}
+
 /* ---------------- カメラ ---------------- */
 let stream = null;
 
 async function startCamera(){
+  if(srcKind !== 'camera') return;      // ファイルを読み込み中はカメラを触らない
   stopStream();
   const res = {480:{w:854,h:480}, 720:{w:1280,h:720}, 1080:{w:1920,h:1080}}[S.resolution];
   const videoC = {
@@ -1358,6 +1504,7 @@ async function refreshDevices(){
 }
 
 async function flipCamera(){
+  if(srcKind !== 'camera'){ toast('読み込み中はカメラを切り替えられません'); return; }
   S.deviceId = null;
   S.facing = (S.facing === 'environment') ? 'user' : 'environment';
   S.mirror = (S.facing === 'user');
@@ -1395,8 +1542,10 @@ function startRec(){
     return;
   }
   const cs = outCanvas.captureStream(30);
-  if(S.audio && stream){
-    stream.getAudioTracks().forEach(tr => cs.addTrack(tr));
+  if(srcKind === 'video'){
+    fileAudioTracks().forEach(tr => cs.addTrack(tr));   // 読み込んだ動画の音
+  }else if(S.audio && stream){
+    stream.getAudioTracks().forEach(tr => cs.addTrack(tr));  // マイク
   }
   const mime = pickMime();
   try{
@@ -1421,6 +1570,19 @@ function startRec(){
     showResult(lastBlob, 'video');
   };
   recorder.start(200);
+
+  // 読み込んだ動画は頭から流し直し、最後まで行ったら自動で書き出しを終える
+  if(srcKind === 'video'){
+    video.loop = false;
+    try{ video.currentTime = 0; }catch(e){}
+    video.play().catch(()=>{});
+    video.onended = () => {
+      if(recorder && recorder.state !== 'inactive'){
+        stopRec();
+        toast('動画の最後まで書き出しました');
+      }
+    };
+  }
 
   recPaused = false;
   recElapsed = 0;
@@ -1486,6 +1648,11 @@ function stopRec(){
   }
   clearInterval(recTimer);
   releaseWakeLock();
+  if(srcKind === 'video'){                 // プレビューの繰り返し再生に戻す
+    video.onended = null;
+    video.loop = true;
+    video.play().catch(()=>{});
+  }
   recPaused = false;
   const btn = document.getElementById('pauseBtn');
   btn.textContent = '‖';
@@ -1949,6 +2116,19 @@ document.querySelectorAll('.mode').forEach(b => {
 });
 
 document.getElementById('pauseBtn').addEventListener('click', togglePause);
+
+/* 写真・動画の読み込み */
+const fileInput = document.getElementById('fileInput');
+document.getElementById('importBtn').addEventListener('click', () => {
+  if(recorder && recorder.state !== 'inactive'){ toast('録画中は切り替えられません'); return; }
+  if(srcKind !== 'camera'){ backToCamera(); return; }
+  fileInput.value = '';
+  fileInput.click();
+});
+fileInput.addEventListener('change', async e => {
+  const f = e.target.files && e.target.files[0];
+  if(f) await importFile(f);
+});
 
 document.getElementById('speedSelect').addEventListener('change', async e => {
   if(recorder && recorder.state !== 'inactive'){
