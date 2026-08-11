@@ -78,6 +78,7 @@ GLITCH／DATAMOSH
 
 ■ 撮ることに寄り添う機能
 
+・リレーVlog：10秒ずつ撮って次の人にまわし、みんなで1本の動画を作れます。できた動画がバトンです
 ・写真・動画の読み込み：カメラロールにある撮影済みの素材にも、同じエフェクトをかけられます。読み込んだ動画はそのまま書き出せます
 ・録画の一時停止：ストップウォッチのラップのように、録画を止めずに区切れます。止めている間は記録されないので、1本の中で場面が切り替わる動画になります
 ・録画速度：0.25倍のスローから4倍の早回しまで
@@ -132,6 +133,7 @@ VHS,レトロ,フィルム,カメラ,ビデオ,グリッチ,ホラー,心霊,エ
 ・30以上のパラメータを個別に調整し、名前をつけて保存する機能
 ・録画の一時停止（1本の動画内で場面を切り替える）
 ・0.25倍〜4倍の速度での録画
+・受け取った動画に自分の10秒を継ぎ足すリレー機能
 
 アカウント登録は不要で、審査用のテストアカウントもありません。
 起動後、カメラの使用を許可するとすぐにお試しいただけます。
@@ -175,6 +177,7 @@ TUNE IT YOURSELF
 Over 30 individual sliders — chroma bleed, scanlines, tape damage, trails, flicker, bloom, lens distortion, symmetry, coarse pixels. Save any combination under your own name.
 
 BUILT FOR SHOOTING
+- Relay mode: shoot 10 seconds, pass the file to a friend, and they add theirs to the same video
 - Import existing photos and videos and run them through the same effects
 - Pause recording like a stopwatch lap: cuts happen inside a single file
 - Record at 0.25x to 4x speed

@@ -400,6 +400,44 @@
   }
   .my-empty{color:var(--muted);font-size:12px;line-height:1.8;padding:2px 0 6px;}
 
+  /* ---------- RELAY ---------- */
+  .relay-choices{display:flex;flex-direction:column;gap:9px;}
+  .relay-choice{
+    text-align:left;padding:14px 16px;border-radius:12px;
+    border:1px solid var(--line);background:var(--panel-2);color:var(--text);
+    display:flex;flex-direction:column;gap:4px;
+  }
+  .relay-choice .rc-title{font-size:14px;font-weight:900;}
+  .relay-choice .rc-sub{font-size:11.5px;color:var(--muted);line-height:1.7;}
+  #relayBtn.on{color:var(--b);border:1px solid rgba(239,63,150,.5);}
+
+  #relayOverlay{
+    position:fixed;left:0;right:0;top:0;bottom:0;
+    display:none;flex-direction:column;align-items:center;justify-content:center;
+    gap:16px;padding:24px;pointer-events:none;z-index:26;text-align:center;
+  }
+  #relayOverlay.show{display:flex;}
+  #relayPhase{
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;
+    color:#fff;background:rgba(10,10,16,.66);
+    border:1px solid rgba(255,255,255,.16);border-radius:20px;padding:8px 16px;
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  }
+  #relayCount{
+    font-family:'JetBrains Mono',monospace;font-weight:700;
+    font-size:clamp(72px,26vw,150px);line-height:1;color:#fff;
+    text-shadow:0 0 30px rgba(239,63,150,.75), 0 0 70px rgba(0,0,0,.85);
+  }
+  #relayBar{
+    width:min(280px,70vw);height:5px;border-radius:3px;
+    background:rgba(255,255,255,.2);overflow:hidden;
+  }
+  #relayBarIn{height:100%;width:0%;background:var(--b);}
+  #relayHint{
+    color:#fff;font-size:12.5px;line-height:1.8;max-width:300px;
+    text-shadow:0 1px 8px rgba(0,0,0,.9);
+  }
+
   .flash{
     position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:35;
   }
@@ -431,8 +469,10 @@
     <button class="mode" data-mode="photo">PHOTO</button>
     <span class="mode-sep"></span>
     <button class="mode" id="importBtn">読み込み</button>
+    <button class="mode" id="relayBtn">リレー</button>
   </div>
   <input type="file" id="fileInput" accept="image/*,video/*" style="display:none">
+  <input type="file" id="batonInput" accept="video/*" style="display:none">
   <div id="buttons">
     <button class="side-btn small" id="settingsBtn" aria-label="設定">⚙</button>
     <button class="side-btn small" id="pauseBtn" aria-label="録画を一時停止">‖</button>
@@ -559,6 +599,41 @@
       <button class="primary" id="nameOk">保存</button>
     </div>
   </div>
+</div>
+
+<!-- ---------- リレー ---------- -->
+<div class="modal" id="relayModal">
+  <div class="modal-box">
+    <h3>リレーVlog</h3>
+    <p class="modal-note">
+      10秒ずつ撮って次の人にまわし、1本の動画を作ります。<br>
+      できた動画がバトンです。AirDropやメッセージで次の人に渡してください。
+    </p>
+    <div class="relay-choices">
+      <button class="relay-choice" id="relayNew">
+        <span class="rc-title">新しく始める</span>
+        <span class="rc-sub">最初の10秒を撮ります</span>
+      </button>
+      <button class="relay-choice" id="relayCont">
+        <span class="rc-title">受け取った動画を続ける</span>
+        <span class="rc-sub">前の人までの映像に、自分の10秒を足します</span>
+      </button>
+    </div>
+    <p class="modal-note" style="margin:14px 0 0">
+      リレーは<b>縦向き固定</b>です。まわすたびに映像は少しずつ荒れます（ダビングと同じです）。
+    </p>
+    <div class="modal-btns">
+      <button id="relayCancel">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- リレー中の案内。キャンバスの外側なので映像には焼き込まれない -->
+<div id="relayOverlay">
+  <div id="relayPhase">これまでの映像を再生中</div>
+  <div id="relayCount"></div>
+  <div id="relayBar"><div id="relayBarIn"></div></div>
+  <div id="relayHint"></div>
 </div>
 
 <!-- ---------- 速度変換中 ---------- -->
@@ -1110,7 +1185,8 @@ function makeFbo(w, h){
 function resizeTargets(w, h){
   if(glCanvas.width === w && glCanvas.height === h && fbos.length) return;
   glCanvas.width = w;  glCanvas.height = h;
-  outCanvas.width = w; outCanvas.height = h;
+  // リレー中は書き出しサイズを固定する（録画の途中で変えられないため）
+  if(!RELAY.active){ outCanvas.width = w; outCanvas.height = h; }
   fbos.forEach(f => { gl.deleteFramebuffer(f.fb); gl.deleteTexture(f.tex); });
   fbos = [makeFbo(w, h), makeFbo(w, h)];
   fitCanvas();
@@ -1154,6 +1230,16 @@ function effective(){
 function render(now){
   if(!S.running) return;
   requestAnimationFrame(render);
+
+  // リレーの再生パート：受け取った映像はエフェクトを通さず、そのまま流す
+  if(RELAY.active && RELAY.phase === 'replay'){
+    if(batonVideo.readyState >= 2 && batonVideo.videoWidth){
+      drawCover(batonVideo, batonVideo.videoWidth, batonVideo.videoHeight);
+    }
+    updateRelayOverlay();
+    return;
+  }
+  if(RELAY.active) updateRelayOverlay();
 
   // 映像のもと：カメラ／読み込んだ動画（どちらも video 要素）か、読み込んだ写真
   const isStill = (srcKind === 'image');
@@ -1246,7 +1332,11 @@ function render(now){
   cur = 1 - cur;
 
   // --- 2Dキャンバスへ合成（OSDを重ねる。録画対象はこちら） ---
-  octx.drawImage(glCanvas, 0, 0);
+  if(RELAY.active){
+    drawCover(glCanvas, glCanvas.width, glCanvas.height);
+  }else{
+    octx.drawImage(glCanvas, 0, 0);
+  }
   if(S.osd) drawOSD(t);
 
   // 自動グリッチ：頻度は控えめなほど「たまに一瞬だけ壊れる」ホラー向きになる
@@ -1260,12 +1350,21 @@ function render(now){
   }
 }
 
+/* 縦横比を保ったまま、はみ出す分を切って出力キャンバス全体を埋める */
+function drawCover(src, sw, sh){
+  const dw = outCanvas.width, dh = outCanvas.height;
+  if(!sw || !sh) return;
+  const k = Math.max(dw / sw, dh / sh);
+  const w = sw * k, h = sh * k;
+  octx.drawImage(src, (dw - w) / 2, (dh - h) / 2, w, h);
+}
+
 /* ---------------- OSD（カムコーダー風表示） ---------------- */
 function two(n){ return String(n).padStart(2, '0'); }
 
 function drawOSD(t){
   const w = outCanvas.width, h = outCanvas.height;
-  const s = h / 720;                      // 720pを基準にスケール
+  const s = Math.min(w, h) / 720;         // 短い辺を基準にする（縦向きでも大きさが揃う）
   const pad = Math.round(28 * s);
   const fs  = Math.round(30 * s);
   octx.save();
@@ -1504,6 +1603,7 @@ async function refreshDevices(){
 }
 
 async function flipCamera(){
+  if(RELAY.active){ toast('リレー中は切り替えられません'); return; }
   if(srcKind !== 'camera'){ toast('読み込み中はカメラを切り替えられません'); return; }
   S.deviceId = null;
   S.facing = (S.facing === 'environment') ? 'user' : 'environment';
@@ -1542,14 +1642,17 @@ function startRec(){
     return;
   }
   const cs = outCanvas.captureStream(30);
-  if(srcKind === 'video'){
+  if(RELAY.active){
+    relayAudioTracks().forEach(tr => cs.addTrack(tr));       // 受け取った動画の音＋マイク
+  }else if(srcKind === 'video'){
     fileAudioTracks().forEach(tr => cs.addTrack(tr));   // 読み込んだ動画の音
   }else if(S.audio && stream){
     stream.getAudioTracks().forEach(tr => cs.addTrack(tr));  // マイク
   }
   const mime = pickMime();
   try{
-    recorder = mime ? new MediaRecorder(cs, {mimeType: mime, videoBitsPerSecond: 8_000_000})
+    const bps = RELAY.active ? 5_000_000 : 8_000_000;
+    recorder = mime ? new MediaRecorder(cs, {mimeType: mime, videoBitsPerSecond: bps})
                     : new MediaRecorder(cs);
   }catch(e){
     try{ recorder = new MediaRecorder(cs); }
@@ -1562,12 +1665,18 @@ function startRec(){
     const ext  = type.includes('mp4') ? 'mp4' : 'webm';
     let blob = new Blob(chunks, {type});
 
-    if(S.speed !== 1 && blob.size > 0){
+    const wasRelay = RELAY.active;
+    if(!wasRelay && S.speed !== 1 && blob.size > 0){
       blob = await convertSpeed(blob, S.speed, type, lastRecSeconds);
     }
     lastBlob = blob;
-    lastName = `yumetape_${stamp()}${S.speed !== 1 ? '_' + String(S.speed).replace('.','') + 'x' : ''}.${ext}`;
-    showResult(lastBlob, 'video');
+    if(wasRelay){
+      lastName = `yumetape_relay_${Math.round(lastRecSeconds)}s.${ext}`;
+      endRelay();
+    }else{
+      lastName = `yumetape_${stamp()}${S.speed !== 1 ? '_' + String(S.speed).replace('.','') + 'x' : ''}.${ext}`;
+    }
+    showResult(lastBlob, 'video', wasRelay);
   };
   recorder.start(200);
 
@@ -1594,7 +1703,7 @@ function startRec(){
   document.getElementById('recBadge').classList.add('on');
   document.getElementById('settingsBtn').classList.add('hide');
   document.getElementById('presetBadge').classList.add('hide');   // 上の帯が詰まるので録画中は隠す
-  document.getElementById('pauseBtn').classList.toggle('on', canPause());
+  document.getElementById('pauseBtn').classList.toggle('on', canPause() && !RELAY.active);
   updateCutBadge();
 
   recTimer = setInterval(() => {
@@ -1662,6 +1771,215 @@ function stopRec(){
   document.getElementById('shutter').classList.remove('recording');
   document.getElementById('recBadge').classList.remove('on', 'paused');
   document.getElementById('cutBadge').classList.remove('on');
+}
+
+/* ---------------- リレーVlog ----------------
+   受け取った動画を先頭から流しながら録画し、終わったらそのままカメラに
+   切り替えて自分の10秒を足す。録画対象は常に同じキャンバスなので、
+   1本の続いた動画として書き出される。                              */
+
+const RELAY = {
+  active:false,
+  phase:'idle',        // 'replay' | 'live'
+  W:720, H:1280,       // 縦向き固定。全員のコマがそろうようにするため
+  maxLive:10,          // 自分の番の秒数
+  batonDur:0,
+  liveStart:0,
+  liveTimer:null,
+};
+
+const batonVideo = document.createElement('video');
+batonVideo.playsInline = true;
+batonVideo.setAttribute('playsinline','');
+batonVideo.preload = 'auto';
+let batonUrl = null;
+
+// 受け取った動画の音とマイクを1つにまとめる（録画の途中で音声を差し替えられないため）
+let relayAudio = null;
+
+function relayAudioSetup(){
+  try{
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    const ctx = new Ctx();
+    const dest = ctx.createMediaStreamDestination();
+
+    const batonGain = ctx.createGain();
+    batonGain.gain.value = 1;
+    ctx.createMediaElementSource(batonVideo).connect(batonGain);
+    batonGain.connect(dest);
+    batonGain.connect(ctx.destination);        // 再生中は本人にも聞こえるように
+
+    let micGain = null;
+    if(S.audio && stream && stream.getAudioTracks().length){
+      micGain = ctx.createGain();
+      micGain.gain.value = 0;                  // 自分の番になったら開く
+      ctx.createMediaStreamSource(stream).connect(micGain);
+      micGain.connect(dest);                   // マイクはスピーカーに出さない（ハウリング防止）
+    }
+    relayAudio = {ctx, dest, batonGain, micGain};
+  }catch(e){
+    relayAudio = null;                          // 音が取れなくても映像は録れる
+  }
+}
+
+function relayAudioSwitchToLive(){
+  if(!relayAudio) return;
+  const t = relayAudio.ctx.currentTime;
+  try{
+    relayAudio.batonGain.gain.setTargetAtTime(0, t, 0.02);
+    if(relayAudio.micGain) relayAudio.micGain.gain.setTargetAtTime(1, t, 0.02);
+  }catch(e){}
+}
+
+function relayAudioTracks(){
+  return relayAudio ? relayAudio.dest.stream.getAudioTracks() : [];
+}
+
+/* 長さが未確定の動画（MediaRecorderで作ったものなど）に備えて実際の長さを確定させる */
+function resolveVideoDuration(v, timeoutMs = 2000){
+  return new Promise(res => {
+    if(isFinite(v.duration) && v.duration > 0) return res(v.duration);
+    let done = false;
+    const finish = d => {
+      if(done) return;
+      done = true;
+      v.removeEventListener('durationchange', onDur);
+      try{ v.currentTime = 0; }catch(e){}
+      res(d);
+    };
+    const onDur = () => {
+      if(isFinite(v.duration) && v.duration > 0) finish(v.duration);
+    };
+    v.addEventListener('durationchange', onDur);
+    try{ v.currentTime = 1e101; }catch(e){}
+    setTimeout(() => finish(isFinite(v.duration) && v.duration > 0 ? v.duration : 0), timeoutMs);
+  });
+}
+
+async function startRelay(batonFile){
+  if(recorder && recorder.state !== 'inactive'){ toast('録画中です'); return; }
+  if(srcKind !== 'camera'){ await backToCamera(); }
+  if(!stream){ toast('先にカメラを起動してください'); return; }
+
+  document.getElementById('relayModal').classList.remove('show');
+
+  RELAY.active = true;
+  RELAY.batonDur = 0;
+  S.speed = 1;                                   // リレー中は等倍のみ
+  document.getElementById('speedSelect').value = '1';
+  updateSpeedBadge();
+
+  outCanvas.width  = RELAY.W;
+  outCanvas.height = RELAY.H;
+  octx.fillStyle = '#000';
+  octx.fillRect(0, 0, RELAY.W, RELAY.H);
+  fitCanvas();
+
+  document.getElementById('relayBtn').classList.add('on');
+  document.getElementById('relayOverlay').classList.add('show');
+
+  if(batonFile){
+    if(batonUrl) URL.revokeObjectURL(batonUrl);
+    batonUrl = URL.createObjectURL(batonFile);
+    batonVideo.src = batonUrl;
+    batonVideo.load();
+    try{
+      await new Promise((res, rej) => {
+        batonVideo.onloadedmetadata = res;
+        batonVideo.onerror = () => rej(new Error('decode'));
+        setTimeout(() => rej(new Error('timeout')), 15000);
+      });
+    }catch(e){
+      toast('この動画は読み込めませんでした');
+      endRelay();
+      return;
+    }
+    RELAY.batonDur = await resolveVideoDuration(batonVideo);
+  }
+
+  relayAudioSetup();
+  RELAY.phase = batonFile ? 'replay' : 'live';
+  startRec();                                    // 以降ずっと同じ録画が続く
+
+  if(RELAY.phase === 'replay'){
+    setRelayOverlay('これまでの映像を再生中', '', 'このあと自動であなたの番になります');
+    try{ batonVideo.currentTime = 0; }catch(e){}
+    batonVideo.play().catch(()=>{});
+    watchBatonEnd();
+  }else{
+    beginRelayLive();
+  }
+}
+
+// 受け取った動画の終わりを、ended と再生位置の見張りの両方で捕まえる
+function watchBatonEnd(){
+  let seen = -1, stalled = 0, fired = false;
+  const go = () => {
+    if(fired) return;
+    fired = true;
+    clearInterval(iv);
+    batonVideo.onended = null;
+    beginRelayLive();
+  };
+  batonVideo.onended = go;
+  const iv = setInterval(() => {
+    if(!RELAY.active || RELAY.phase !== 'replay'){ clearInterval(iv); return; }
+    if(batonVideo.currentTime === seen) stalled += 250; else { stalled = 0; seen = batonVideo.currentTime; }
+    if(RELAY.batonDur && batonVideo.currentTime >= RELAY.batonDur - 0.06) go();
+    if(stalled >= 1200) go();
+  }, 250);
+}
+
+function beginRelayLive(){
+  RELAY.phase = 'live';
+  batonVideo.pause();
+  relayAudioSwitchToLive();
+  RELAY.liveStart = performance.now();
+  setRelayOverlay('あなたの番', '', `${RELAY.maxLive}秒で自動的に終わります`);
+  clearTimeout(RELAY.liveTimer);
+  RELAY.liveTimer = setTimeout(() => {
+    if(RELAY.active && recorder && recorder.state !== 'inactive') stopRec();
+  }, RELAY.maxLive * 1000);
+}
+
+function setRelayOverlay(phase, count, hint){
+  document.getElementById('relayPhase').textContent = phase;
+  document.getElementById('relayCount').textContent = count;
+  document.getElementById('relayHint').textContent = hint;
+}
+
+function updateRelayOverlay(){
+  if(!RELAY.active) return;
+  const bar = document.getElementById('relayBarIn');
+  if(RELAY.phase === 'replay'){
+    const d = RELAY.batonDur || 0;
+    const left = d ? Math.max(0, d - batonVideo.currentTime) : 0;
+    bar.style.width = (d ? Math.min(100, batonVideo.currentTime / d * 100) : 0).toFixed(0) + '%';
+    // 残り3秒からカウントダウン。キャンバスの外なので映像には入らない
+    document.getElementById('relayCount').textContent =
+      (d && left <= 3.0) ? String(Math.max(1, Math.ceil(left))) : '';
+  }else{
+    const el = (performance.now() - RELAY.liveStart) / 1000;
+    bar.style.width = Math.min(100, el / RELAY.maxLive * 100).toFixed(0) + '%';
+    document.getElementById('relayCount').textContent =
+      String(Math.max(0, Math.ceil(RELAY.maxLive - el)));
+  }
+}
+
+function endRelay(){
+  clearTimeout(RELAY.liveTimer);
+  RELAY.active = false;
+  RELAY.phase = 'idle';
+  batonVideo.pause();
+  batonVideo.onended = null;
+  document.getElementById('relayBtn').classList.remove('on');
+  document.getElementById('relayOverlay').classList.remove('show');
+  setRelayOverlay('これまでの映像を再生中', '', '');
+  document.getElementById('relayBarIn').style.width = '0%';
+  // 出力サイズをカメラの解像度に戻す
+  outCanvas.width  = glCanvas.width  || 1280;
+  outCanvas.height = glCanvas.height || 720;
+  fitCanvas();
 }
 
 /* ---------------- 速度変換（スロー／早回し） ---------------- */
@@ -1824,15 +2142,17 @@ function stamp(){
 /* ---------------- 結果表示 ---------------- */
 let resultUrl = null;
 
-function showResult(blob, kind){
+function showResult(blob, kind, isRelay){
   const holder = document.getElementById('resultHolder');
   if(resultUrl) URL.revokeObjectURL(resultUrl);
   resultUrl = URL.createObjectURL(blob);
   holder.innerHTML = kind === 'video'
     ? `<video id="resultMedia" src="${resultUrl}" controls playsinline autoplay loop></video>`
     : `<img id="resultMedia" src="${resultUrl}" alt="撮影結果">`;
-  document.getElementById('resultInfo').textContent =
-    `${lastName} / ${(blob.size/1024/1024).toFixed(1)} MB`;
+  document.getElementById('resultInfo').innerHTML = isRelay
+    ? `${escapeHtml(lastName)} / ${(blob.size/1024/1024).toFixed(1)} MB<br>
+       <span style="color:#ef3f96">これがバトンです。「共有」から次の人に渡してください</span>`
+    : `${escapeHtml(lastName)} / ${(blob.size/1024/1024).toFixed(1)} MB`;
   document.getElementById('result').classList.add('show');
 }
 
@@ -2101,6 +2421,10 @@ document.getElementById('startBtn').addEventListener('click', async () => {
 });
 
 document.getElementById('shutter').addEventListener('click', () => {
+  if(RELAY.active){
+    if(recorder && recorder.state !== 'inactive') stopRec();   // 10秒待たずに切り上げる
+    return;
+  }
   if(S.mode === 'photo'){ takePhoto(); return; }
   if(recorder && recorder.state === 'recording') stopRec();
   else startRec();
@@ -2117,9 +2441,33 @@ document.querySelectorAll('.mode').forEach(b => {
 
 document.getElementById('pauseBtn').addEventListener('click', togglePause);
 
+/* リレーVlog */
+const relayModal = document.getElementById('relayModal');
+const batonInput = document.getElementById('batonInput');
+document.getElementById('relayBtn').addEventListener('click', () => {
+  if(RELAY.active){
+    if(recorder && recorder.state !== 'inactive') stopRec();   // 途中まででも書き出す
+    else endRelay();
+    return;
+  }
+  if(recorder && recorder.state !== 'inactive'){ toast('録画中は始められません'); return; }
+  relayModal.classList.add('show');
+});
+document.getElementById('relayCancel').addEventListener('click', () => relayModal.classList.remove('show'));
+document.getElementById('relayNew').addEventListener('click', () => startRelay(null));
+document.getElementById('relayCont').addEventListener('click', () => {
+  batonInput.value = '';
+  batonInput.click();
+});
+batonInput.addEventListener('change', e => {
+  const f = e.target.files && e.target.files[0];
+  if(f) startRelay(f);
+});
+
 /* 写真・動画の読み込み */
 const fileInput = document.getElementById('fileInput');
 document.getElementById('importBtn').addEventListener('click', () => {
+  if(RELAY.active){ toast('リレー中は使えません'); return; }
   if(recorder && recorder.state !== 'inactive'){ toast('録画中は切り替えられません'); return; }
   if(srcKind !== 'camera'){ backToCamera(); return; }
   fileInput.value = '';
@@ -2131,7 +2479,7 @@ fileInput.addEventListener('change', async e => {
 });
 
 document.getElementById('speedSelect').addEventListener('change', async e => {
-  if(recorder && recorder.state !== 'inactive'){
+  if(RELAY.active || (recorder && recorder.state !== 'inactive')){
     e.target.value = String(S.speed);
     toast('録画中は変更できません');
     return;
