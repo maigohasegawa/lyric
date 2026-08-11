@@ -544,6 +544,9 @@
     </div>
     <div id="dreamFields"></div>
 
+    <div class="group-title">LENS</div>
+    <div id="lensFields"></div>
+
     <div class="group-title">COLOR</div>
     <div class="field">
       <label>色味</label>
@@ -693,9 +696,14 @@ const PARAM_DEFS = {
     {key:'leak',     label:'光漏れ',                     min:0, max:1,   step:.01, def:0},
     {key:'spark',    label:'きらめき（星）',             min:0, max:1,   step:.01, def:0},
     {key:'aberr',    label:'レンズの色ズレ（周辺）',     min:0, max:1,   step:.01, def:0},
-    {key:'fish',     label:'レンズのふくらみ',           min:-.6,max:1,  step:.01, def:0},
     {key:'breathe',  label:'うねり（ゆっくり歪む）',     min:0, max:1,   step:.01, def:0},
     {key:'lofi',     label:'低画質デジカメ（粗いドット）',min:0, max:1,  step:.01, def:0},
+  ],
+  lens: [
+    {key:'fish',     label:'魚眼（ふくらみ／へこみ）',   min:-.6,max:1.1,step:.01, def:0},
+    {key:'circle',   label:'ドアスコープ（丸く切り抜く）',min:0, max:1,  step:.01, def:0},
+    {key:'droste',   label:'ドロステ（無限の入れ子）',   min:0, max:1,   step:.01, def:0},
+    {key:'dspin',    label:'ドロステのひねり',           min:-1,max:1,   step:.01, def:0},
   ],
   color: [
     {key:'sat',      label:'彩度',                       min:0, max:2,   step:.01, def:.92},
@@ -719,7 +727,8 @@ const TINTS = [
 
 // 対称。ドリーム／ウィアードコア向け
 const SYMS = ['なし', '左右対称', '上下対称', '4分割'];
-const ALL_PARAMS = [...PARAM_DEFS.vhs, ...PARAM_DEFS.glitch, ...PARAM_DEFS.dream, ...PARAM_DEFS.color];
+const ALL_PARAMS = [...PARAM_DEFS.vhs, ...PARAM_DEFS.glitch, ...PARAM_DEFS.dream,
+                    ...PARAM_DEFS.lens, ...PARAM_DEFS.color];
 
 const P = {};
 ALL_PARAMS.forEach(d => P[d.key] = d.def);
@@ -728,6 +737,7 @@ ALL_PARAMS.forEach(d => P[d.key] = d.def);
 const BASE = {bleed:0,rgb:0,noise:0,scan:0,wobble:0,track:0,ghost:0,drop:0,interlace:0,stutter:0,
               roll:0,flicker:0,block:0,slice:0,wave:0,invert:0,autoRate:.2,
               bloom:0,soft:0,fade:0,leak:0,spark:0,aberr:0,fish:0,breathe:0,lofi:0,
+              circle:0,droste:0,dspin:0,
               sat:1,contrast:1,bright:0,vig:0,tint:0};
 
 // group: プリセット一覧の見出し／tintIdx: TINTS の番号
@@ -765,6 +775,15 @@ const PRESETS = [
    p:{bleed:2.4,rgb:.5,noise:.6,scan:.5,wobble:.75,track:1,ghost:.5,drop:.75,
       interlace:.5,stutter:.3,flicker:.5,roll:.35,block:.45,slice:.55,wave:.3,invert:.3,
       autoRate:.45,sat:.5,contrast:1.35,bright:-.05,vig:.6}},
+
+  {group:'ホラー', name:'ドアスコープ',
+   p:{fish:.85,circle:1,bleed:.8,rgb:.12,noise:.35,scan:.3,wobble:.12,track:.2,ghost:.2,
+      drop:.2,interlace:.3,flicker:.18,autoRate:.1,
+      sat:.5,contrast:1.22,bright:-.04,vig:.35}},
+
+  {group:'ドリーム', name:'無限テレビ',
+   p:{droste:.95,dspin:.1,bleed:1.2,rgb:.2,noise:.14,scan:.35,interlace:.25,ghost:.2,
+      bloom:.3,soft:.15,drop:.15,sat:1.1,contrast:1.1,vig:.3}},
 
   {group:'ドリーム', name:'DREAMCORE', tintIdx:5,
    p:{bloom:.7,soft:.45,fade:.5,leak:.3,spark:.25,aberr:.35,fish:.22,breathe:.3,lofi:.12,
@@ -833,6 +852,7 @@ uniform float uBleed, uRgb, uNoise, uScan, uWobble, uTrack, uGhost, uDrop, uInte
 uniform float uBlock, uSlice, uWave, uInvert;
 uniform float uFlicker, uRoll;
 uniform float uBloom, uSoft, uFade, uAberr, uFish, uBreathe, uLofi, uLeak, uSpark, uSym;
+uniform float uCircle, uDroste, uDspin;
 uniform float uSat, uContrast, uBright, uVig, uTint;
 uniform vec3  uTintCol;
 
@@ -887,10 +907,14 @@ void main(){
     else { uv.x = 0.5 - abs(uv.x - 0.5); uv.y = 0.5 - abs(uv.y - 0.5); }
   }
 
-  /* --- レンズのふくらみ（魚眼／糸巻き） --- */
+  /* --- 魚眼／糸巻き ---
+     縦横比を補正した空間で半径を測るので、横長でも楕円にならない。
+     画面の隅を半径1として、そこでの縮み具合を uFish で決める。 */
+  vec2 fasp = vec2(uRes.x / uRes.y, 1.0);
   if(abs(uFish) > 0.001){
-    vec2 fc = uv - 0.5;
-    uv = 0.5 + fc * (1.0 - uFish * dot(fc, fc) * 1.6);
+    vec2  fc = (uv - 0.5) * fasp;
+    float rn = length(fc) / (0.5 * length(fasp));
+    uv = 0.5 + (fc * (1.0 - uFish * rn * rn * 0.8)) / fasp;
   }
 
   /* --- ゆっくりしたうねり（夢の中の揺らぎ） --- */
@@ -1106,6 +1130,26 @@ void main(){
     col += star * on * tw * uSpark * smoothstep(0.3, 0.8, lum3) * 1.1;
   }
 
+  /* --- ドアスコープ：内接する円の外を黒く落とす --- */
+  if(uCircle > 0.001){
+    float rr = length((vUv - 0.5) * fasp) / 0.5;
+    col *= 1.0 - uCircle * smoothstep(0.93, 1.0, rr);
+  }
+
+  /* --- ドロステ：前のコマを内側に縮めて描き、入れ子を無限に続かせる ---
+     縮小と回転をかけた前フレームを中央にはめ込む。次のコマではその絵の
+     中にさらに前の絵が入っているので、回すたびに奥へ続いていく。 */
+  if(uDroste > 0.001){
+    vec2  dc = (vUv - 0.5) * fasp;
+    float da = uDspin * 0.7;
+    vec2  rc = vec2(dc.x*cos(da) - dc.y*sin(da), dc.x*sin(da) + dc.y*cos(da));
+    vec2  dp = 0.5 + (rc / fasp) / 0.62;              // 0.62 = 内側の絵の大きさ
+    vec2  dd = abs(dp - 0.5);
+    float inner = 1.0 - smoothstep(0.46, 0.5, max(dd.x, dd.y));
+    vec3  fb = texture2D(uPrev, clamp(dp, vec2(0.001), vec2(0.999))).rgb;
+    col = mix(col, fb * 0.985, uDroste * inner);      // わずかに落として白飛びを防ぐ
+  }
+
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }`;
 
@@ -1156,7 +1200,7 @@ function initGL(){
   const names = ['uTex','uPrev','uRes','uTime','uMirror','uBleed','uRgb','uNoise','uScan','uWobble',
                  'uTrack','uGhost','uDrop','uInterlace','uBlock','uSlice','uWave','uInvert',
                  'uFlicker','uRoll','uBloom','uSoft','uFade','uAberr','uFish','uBreathe',
-                 'uLofi','uLeak','uSpark','uSym',
+                 'uLofi','uLeak','uSpark','uSym','uCircle','uDroste','uDspin',
                  'uSat','uContrast','uBright','uVig','uTint','uTintCol'];
   names.forEach(n => uni[n] = gl.getUniformLocation(progFx, n));
   uniBlit.uTex = gl.getUniformLocation(progBlit, 'uTex');
@@ -1311,6 +1355,9 @@ function render(now){
   gl.uniform1f(uni.uLofi, e.lofi);
   gl.uniform1f(uni.uLeak, e.leak);
   gl.uniform1f(uni.uSpark, e.spark);
+  gl.uniform1f(uni.uCircle, e.circle);
+  gl.uniform1f(uni.uDroste, e.droste);
+  gl.uniform1f(uni.uDspin, e.dspin);
   gl.uniform1f(uni.uSym, S.symIdx);
   gl.uniform1f(uni.uSat, e.sat);
   gl.uniform1f(uni.uContrast, e.contrast);
@@ -2334,6 +2381,7 @@ function buildSliders(){
   make(PARAM_DEFS.vhs, 'vhsFields');
   make(PARAM_DEFS.glitch, 'glitchFields');
   make(PARAM_DEFS.dream, 'dreamFields');
+  make(PARAM_DEFS.lens, 'lensFields');
   make(PARAM_DEFS.color, 'colorFields');
 
   const sym = document.getElementById('symSelect');
@@ -2430,11 +2478,13 @@ document.getElementById('shutter').addEventListener('click', () => {
   else startRec();
 });
 
-document.querySelectorAll('.mode').forEach(b => {
+// 「読み込み」「リレー」も見た目をそろえるため .mode を付けているので、
+// モード切替の対象は data-mode を持つものだけに絞る
+document.querySelectorAll('.mode[data-mode]').forEach(b => {
   b.addEventListener('click', () => {
     if(recorder && recorder.state === 'recording') return;
     S.mode = b.dataset.mode;
-    document.querySelectorAll('.mode').forEach(x => x.classList.toggle('active', x === b));
+    document.querySelectorAll('.mode[data-mode]').forEach(x => x.classList.toggle('active', x === b));
     document.getElementById('shutter').classList.toggle('photo', S.mode === 'photo');
   });
 });
