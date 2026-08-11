@@ -78,6 +78,7 @@ GLITCH／DATAMOSH
 
 ■ 撮ることに寄り添う機能
 
+・写真・動画の読み込み：カメラロールにある撮影済みの素材にも、同じエフェクトをかけられます。読み込んだ動画はそのまま書き出せます
 ・録画の一時停止：ストップウォッチのラップのように、録画を止めずに区切れます。止めている間は記録されないので、1本の中で場面が切り替わる動画になります
 ・録画速度：0.25倍のスローから4倍の早回しまで
 ・GLITCHボタン：押している間だけ映像が激しく壊れます
@@ -97,7 +98,7 @@ GLITCH／DATAMOSH
 ## キーワード（100文字以内・カンマ区切り・スペースなし）
 
 ```
-VHS,レトロ,フィルム,カメラ,ビデオ,グリッチ,ホラー,心霊,エモい,夢,ドリームコア,ノイズ,8mm,昭和,平成,加工
+VHS,レトロ,フィルム,カメラ,ビデオ,グリッチ,ホラー,心霊,エモい,夢,ドリームコア,ノイズ,8mm,昭和,加工,動画編集
 ```
 
 ---
@@ -174,6 +175,7 @@ TUNE IT YOURSELF
 Over 30 individual sliders — chroma bleed, scanlines, tape damage, trails, flicker, bloom, lens distortion, symmetry, coarse pixels. Save any combination under your own name.
 
 BUILT FOR SHOOTING
+- Import existing photos and videos and run them through the same effects
 - Pause recording like a stopwatch lap: cuts happen inside a single file
 - Record at 0.25x to 4x speed
 - Hold GLITCH to break the image on purpose

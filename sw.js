@@ -2,8 +2,8 @@
    アプリ本体をキャッシュして、機内モードでも起動できるようにする。
    本体を更新したら CACHE のバージョンを上げること。 */
 
-const CACHE   = 'yumetape-v2';
-const RUNTIME = 'yumetape-runtime-v2';
+const CACHE   = 'yumetape-v3';
+const RUNTIME = 'yumetape-runtime-v3';
 
 const SHELL = [
   './',
