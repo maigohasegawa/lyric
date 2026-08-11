@@ -39,7 +39,7 @@ VHS・ホラー・ゆめのカメラ
 ## プロモーションテキスト（170文字以内・審査なしで差し替え可）
 
 ```
-いつもの帰り道も、部屋の窓も、撮るだけで見たことのある夢みたいになります。VHSのにじみ、心霊ビデオのざらつき、ドリームコアの光。15種類のプリセットから選ぶだけ。加工の待ち時間はありません。
+いつもの帰り道も、部屋の窓も、撮るだけで見たことのある夢みたいになります。VHSのにじみ、心霊ビデオのざらつき、ドリームコアの光。17種類のプリセットから選ぶだけ。加工の待ち時間はありません。
 ```
 
 ---
@@ -52,18 +52,18 @@ VHS・ホラー・ゆめのカメラ
 撮った時点でその見た目になっているので、あとから加工する必要はありません。写真も動画も、そのまま写真アプリに保存できます。
 
 
-■ 4つの方向、15のプリセット
+■ 4つの方向、17のプリセット
 
 【VHS】
 CLEAN／VHS 1984／すり切れテープ／8mm ホームビデオ
 色がにじみ、走査線が走り、テープが揺れます。実家から出てきたビデオのような質感です。
 
 【ホラー】
-心霊ビデオ／監視カメラ／暗視カメラ／呪いのテープ
+心霊ビデオ／監視カメラ／暗視カメラ／呪いのテープ／ドアスコープ
 画面が縦に流れ、照明が明滅し、暗いところほど粒子が荒れます。何でもない廊下が、見てはいけないもののように写ります。
 
 【ドリーム】
-DREAMCORE／ゆめかわ／WEIRDCORE／リミナル／2000sデジカメ
+無限テレビ／DREAMCORE／ゆめかわ／WEIRDCORE／リミナル／2000sデジカメ
 光がにじみ、黒が浮いて、画面全体がパステルの霞に沈みます。窓や街灯が入ると一気にそれらしくなります。
 
 【グリッチ】
@@ -73,7 +73,7 @@ GLITCH／DATAMOSH
 
 ■ 細かく詰められます
 
-30以上のつまみを一つずつ動かせます。色のにじみ、走査線、テープの傷、残像、明滅、ブルーム、レンズのゆがみ、対称、粗いドット——気に入った組み合わせは名前をつけて保存でき、いつでも呼び出せます。
+30以上のつまみを一つずつ動かせます。色のにじみ、走査線、テープの傷、残像、明滅、ブルーム、魚眼、ドロステ（無限の入れ子）、対称、粗いドット——気に入った組み合わせは名前をつけて保存でき、いつでも呼び出せます。
 
 
 ■ 撮ることに寄り添う機能
@@ -129,7 +129,7 @@ VHS,レトロ,フィルム,カメラ,ビデオ,グリッチ,ホラー,心霊,エ
 ネットワーク通信は行わず、すべての処理は端末内で完結します。
 
 主な機能：
-・15種類のプリセット（VHS / ホラー / ドリーム / グリッチ）
+・17種類のプリセット（VHS / ホラー / ドリーム / グリッチ）
 ・30以上のパラメータを個別に調整し、名前をつけて保存する機能
 ・録画の一時停止（1本の動画内で場面を切り替える）
 ・0.25倍〜4倍の速度での録画
@@ -159,22 +159,22 @@ YUMETAPE turns everyday scenes into footage that feels like a half-remembered dr
 
 Effects are burned in as you shoot, so there is nothing to edit afterwards. Photos and videos save straight to your camera roll.
 
-FOUR DIRECTIONS, FIFTEEN PRESETS
+FOUR DIRECTIONS, SEVENTEEN PRESETS
 
 VHS — CLEAN / VHS 1984 / WORN TAPE / 8mm HOME VIDEO
 Colors bleed sideways, scanlines crawl, the tape wobbles.
 
-HORROR — GHOST TAPE / SECURITY CAM / NIGHT VISION / CURSED TAPE
+HORROR — GHOST TAPE / SECURITY CAM / NIGHT VISION / CURSED TAPE / PEEPHOLE
 The picture rolls, lights flicker, and grain gathers in the shadows.
 
-DREAM — DREAMCORE / YUMEKAWA / WEIRDCORE / LIMINAL / 2000s DIGICAM
+DREAM — INFINITE TV / DREAMCORE / YUMEKAWA / WEIRDCORE / LIMINAL / 2000s DIGICAM
 Highlights bloom, blacks lift, and everything sinks into a pastel haze.
 
 GLITCH — GLITCH / DATAMOSH
 The image breaks into fine mosaic blocks and slides out of place.
 
 TUNE IT YOURSELF
-Over 30 individual sliders — chroma bleed, scanlines, tape damage, trails, flicker, bloom, lens distortion, symmetry, coarse pixels. Save any combination under your own name.
+Over 30 individual sliders — chroma bleed, scanlines, tape damage, trails, flicker, bloom, fisheye, droste recursion, symmetry, coarse pixels. Save any combination under your own name.
 
 BUILT FOR SHOOTING
 - Relay mode: shoot 10 seconds, pass the file to a friend, and they add theirs to the same video
