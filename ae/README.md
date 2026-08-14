@@ -34,6 +34,32 @@ AE を再起動すると、**ウィンドウ** メニューの一番下あたり
 
 > ファイルの読み書きもネットワークもしないので、環境設定の「スクリプトによるファイルへの書き込みとネットワークへのアクセスを許可」は不要です。
 
+### macOS の場合
+
+`ScriptUI Panels` は `/Applications` の中なので、コピーするときに **管理者パスワードを聞かれます**。正常な動作なので、そのまま入れてください。AE 2026 なら実際のパスはこうなります。
+
+```
+/Applications/Adobe After Effects 2026/Scripts/ScriptUI Panels/
+```
+
+ターミナルから入れるなら：
+
+```bash
+sudo cp ae/time-resize.jsx "/Applications/Adobe After Effects 2026/Scripts/ScriptUI Panels/"
+```
+
+`~/Library/Application Support/Adobe/` の下に置く方法は**使えません**。あの場所を読むのは CEP 拡張機能で、ScriptUI パネルのスクリプトは対象外です。管理者権限を使いたくない場合は、上の「スクリプトファイルを実行」で開いてください。
+
+ブラウザでダウンロードしたファイルには macOS が検疫属性を付けます。AE が読めない・無反応のときはこれを外します。
+
+```bash
+xattr -d com.apple.quarantine "/Applications/Adobe After Effects 2026/Scripts/ScriptUI Panels/time-resize.jsx"
+```
+
+### 対応バージョンについて
+
+ExtendScript と ScriptUI パネルは AE 2026 でも現役です（AE 向けの UXP パネルはまだ提供されていないため、パネルは引き続き ExtendScript が標準）。Apple Silicon でもそのまま動きます。
+
 ---
 
 ## 使いかた
